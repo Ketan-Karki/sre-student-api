@@ -17,3 +17,6 @@ run: build
 
 clean:
 	rm -f $(APP_NAME)
+
+migrate:
+	$(GO) run -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@latest -path ./migrations -database sqlite3://api.db up
