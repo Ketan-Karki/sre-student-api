@@ -1,0 +1,8 @@
+PUT http://localhost:8080/students/875afc92-fb5c-4197-ac1f-cfd286f23980
+Content-Type: application/json
+
+{
+    "name": "Cristiano Ronaldo",
+    "age": 36,
+    "grade": 12
+}
