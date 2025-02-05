@@ -5,9 +5,12 @@ import (
 )
 
 func RegisterRoutes(server *gin.Engine) {
-	server.GET("/students", getStudents)
-	server.GET("/students/:id", getStudent)
-	server.POST("/students", createStudent)
-	server.PUT("/students/:id", updateStudent)
-	server.DELETE("/students/:id", deleteStudent)
+	v1 := server.Group("/api/v1")
+	{
+		v1.GET("/students", getStudents)
+		v1.GET("/students/:id", getStudent)
+		v1.POST("/students", createStudent)
+		v1.PUT("/students/:id", updateStudent)
+		v1.DELETE("/students/:id", deleteStudent)
+	}
 }

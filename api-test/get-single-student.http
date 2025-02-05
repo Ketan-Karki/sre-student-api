@@ -1,1 +1,1 @@
-GET http://localhost:8080/students/b20d48f8-1497-4601-9d0f-ccc07ce0eaa4
+GET http://localhost:8080/api/v1/students/b20d48f8-1497-4601-9d0f-ccc07ce0eaa4

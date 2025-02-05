@@ -1,4 +1,4 @@
-PUT http://localhost:8080/students/0e4f9a2b-9041-450f-bc21-e33c496d0687
+PUT http://localhost:8080/api/v1/students/0e4f9a2b-9041-450f-bc21-e33c496d0687
 Content-Type: application/json
 
 {
