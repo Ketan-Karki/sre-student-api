@@ -6,11 +6,14 @@ import (
 	"example.com/sre-bootcamp-rest-api/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"log"
 )
 
 func getStudents(c *gin.Context) {
+	log.Println("Fetching all students...")
 	students, err := models.GetAllStudents()
 	if err != nil {
+		log.Println("Error fetching students:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Could not fetch students. Try again later."})
 		return
 	}
@@ -18,10 +21,12 @@ func getStudents(c *gin.Context) {
 }
 
 func getStudent(c *gin.Context) {
+	log.Printf("Fetching student with ID: %s...", c.Param("id"))
 	id := c.Param("id")
 	
 	student, err := models.GetStudentByID(id)
 	if err != nil {
+		log.Println("Error fetching student:", err)
 		c.JSON(http.StatusNotFound, gin.H{"message": "Student not found."})
 		return
 	}
@@ -30,10 +35,12 @@ func getStudent(c *gin.Context) {
 }
 
 func createStudent(c *gin.Context) {
+	log.Println("Creating a new student...")
 	var student models.Student
 	err := c.ShouldBindJSON(&student)
 
 	if err != nil {
+		log.Println("Error binding JSON:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Could not parse request data."})
 		return
 	}
@@ -41,6 +48,7 @@ func createStudent(c *gin.Context) {
 	student.ID = uuid.New().String()
 
 	if err := student.Save(); err != nil {
+		log.Println("Error saving student:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Could not create student. Try again later."})
 		return
 	}
@@ -49,6 +57,7 @@ func createStudent(c *gin.Context) {
 }
 
 func updateStudent(c *gin.Context) {
+	log.Printf("Updating student with ID: %s...", c.Param("id"))
 	id := c.Param("id")
 	
 	existingStudent, err := models.GetStudentByID(id)
@@ -60,6 +69,7 @@ func updateStudent(c *gin.Context) {
 	var student models.Student
 	err = c.ShouldBindJSON(&student)
 	if err != nil {
+		log.Println("Error binding JSON:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Could not parse request data."})
 		return
 	}
@@ -67,6 +77,7 @@ func updateStudent(c *gin.Context) {
 	student.ID = existingStudent.ID
 	err = student.Update()
 	if err != nil {
+		log.Println("Error updating student:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Could not update student. Try again later."})
 		return
 	}
@@ -75,6 +86,7 @@ func updateStudent(c *gin.Context) {
 }
 
 func deleteStudent(c *gin.Context) {
+	log.Printf("Deleting student with ID: %s...", c.Param("id"))
 	id := c.Param("id")
 
 	student, err := models.GetStudentByID(id)
@@ -85,6 +97,7 @@ func deleteStudent(c *gin.Context) {
 
 	err = student.Delete()
 	if err != nil {
+		log.Println("Error deleting student:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Could not delete student. Try again later."})
 		return
 	}
