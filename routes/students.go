@@ -3,10 +3,11 @@ package routes
 import (
 	"net/http"
 
+	"log"
+
 	"example.com/sre-bootcamp-rest-api/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"log"
 )
 
 func getStudents(c *gin.Context) {
