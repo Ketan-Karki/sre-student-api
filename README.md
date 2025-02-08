@@ -42,6 +42,12 @@ To set up the project locally, follow these steps:
 - `PUT /students/:id`: Update a student's information.
 - `DELETE /students/:id`: Delete a student record.
 
+### Contribution Guidelines
+I welcome contributions to enhance the Student API. Please fork the repository and submit a pull request with your changes. Ensure your code adheres to the project's coding standards and includes appropriate tests.
+
 ## License
 
 This project is licensed under the MIT License.
+
+## Contact
+For any questions or support, please contact the project maintainer at [ketankarki2626@gmail.com].
