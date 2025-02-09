@@ -10,13 +10,17 @@ import (
 	"time"
 
 	"example.com/sre-bootcamp-rest-api/db"
+	"example.com/sre-bootcamp-rest-api/middleware"
 	"example.com/sre-bootcamp-rest-api/routes"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
 	db.InitDB()
+	middleware.InitRedis()
 	server := gin.Default()
+
+	server.Use(middleware.CacheMiddleware(time.Minute))
 
 	routes.RegisterRoutes(server)
 
