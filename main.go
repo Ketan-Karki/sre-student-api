@@ -16,8 +16,8 @@ import (
 )
 
 func main() {
-	db.InitDB()
 	middleware.InitRedis()
+	db.InitDB()
 	server := gin.Default()
 
 	server.Use(middleware.CacheMiddleware(time.Minute))

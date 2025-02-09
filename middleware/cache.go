@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -45,10 +46,12 @@ func CacheMiddleware(ttl time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Generate cache key
 		cacheKey := c.Request.URL.String()
+		log.Println("Cache key:", cacheKey)
 
 		// Check if cached response exists
 		cached, err := rdb.Get(ctx, cacheKey).Result()
 		if err == nil {
+			log.Println("Cache hit for key:", cacheKey)
 			var resp cachedResponse
 			if err := json.Unmarshal([]byte(cached), &resp); err == nil {
 				// Return cached response
@@ -59,9 +62,14 @@ func CacheMiddleware(ttl time.Duration) gin.HandlerFunc {
 				}
 				c.Writer.WriteHeader(resp.Status)
 				c.Writer.Write(resp.Body)
+				log.Println("Returned cached response for key:", cacheKey)
 				c.Abort()
 				return
+			} else {
+				log.Println("Failed to unmarshal cached response for key:", cacheKey, "Error:", err)
 			}
+		} else {
+			log.Println("Cache miss for key:", cacheKey, "Error:", err)
 		}
 
 		// Create a custom response writer
@@ -87,8 +95,18 @@ func CacheMiddleware(ttl time.Duration) gin.HandlerFunc {
 
 			data, err := json.Marshal(resp)
 			if err == nil {
-				rdb.Set(ctx, cacheKey, data, ttl).Err()
+				err := rdb.Set(ctx, cacheKey, data, ttl).Err()
+				if err == nil {
+					log.Println("Cached response for key:", cacheKey)
+				} else {
+					log.Println("Failed to cache response for key:", cacheKey, "Error:", err)
+				}
+			} else {
+				log.Println("Failed to marshal response for key:", cacheKey, "Error:", err)
 			}
+		} else {
+			log.Println("Did not cache response for key:", cacheKey, "Status code:", c.Writer.Status())
 		}
+		log.Println("Finished processing request for key:", cacheKey)
 	}
 }
