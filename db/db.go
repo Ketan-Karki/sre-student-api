@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -10,27 +11,28 @@ import (
 
 var DB *sql.DB
 
-func InitDB() {
+func InitDB() error {
 	err := godotenv.Load()
 	if err != nil {
-		panic("Could not load .env file.")
+		return fmt.Errorf("failed to load .env file: %w", err)
 	}
 
 	dbURL := os.Getenv("DATABASE_URL")
 
-	DB, err = sql.Open("sqlite3", dbURL)
+	var err2 error
+	DB, err2 = sql.Open("sqlite3", dbURL)
 
-	if err != nil {
-		panic("Could not connect to database.")
+	if err2 != nil {
+		return fmt.Errorf("failed to connect to database: %w", err2)
 	}
 
 	DB.SetMaxOpenConns(10)
 	DB.SetMaxIdleConns(5)
 
-	createTables()
+	return createTables()
 }
 
-func createTables() {
+func createTables() error {
 	createStudentsTable := `
 	CREATE TABLE IF NOT EXISTS students (
 		id TEXT PRIMARY KEY,
@@ -41,6 +43,7 @@ func createTables() {
 
 	_, err := DB.Exec(createStudentsTable)
 	if err != nil {
-		panic("Could not create students table.")
+		return fmt.Errorf("failed to create students table: %w", err)
 	}
+	return nil
 }

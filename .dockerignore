@@ -1,0 +1,9 @@
+**/.git
+**/.vscode
+**/node_modules
+**/*.log
+**/Dockerfile
+**/docker-compose.yml
+**/tmp
+**/*_test.go
+**/coverage.out
