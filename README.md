@@ -12,7 +12,7 @@ To set up the project locally, follow these steps:
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/student-api.git
+   git clone https://github.com/ketan-karki/student-api.git
    cd student-api
    ```
 
@@ -41,6 +41,23 @@ To set up the project locally, follow these steps:
 - `GET /students/:id`: Retrieve a specific student by ID.
 - `PUT /students/:id`: Update a student's information.
 - `DELETE /students/:id`: Delete a student record.
+
+## Docker Instructions
+
+## Prerequisites
+- Ensure that you have Docker installed on your machine.
+
+## Building the Docker Image
+To build the Docker image, run the following command in the root of the project:
+```bash
+docker build -t ketan-karki/student-api .
+```
+
+## Running the Docker Container
+To run the Docker container, use the following command:
+```bash
+docker run -d -p 8080:80 ketan-karki/student-api
+```
 
 ### Contribution Guidelines
 I welcome contributions to enhance the Student API. Please fork the repository and submit a pull request with your changes. Ensure your code adheres to the project's coding standards and includes appropriate tests.
