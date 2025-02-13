@@ -1,9 +1,4 @@
-**/.git
-**/.vscode
-**/node_modules
-**/*.log
-**/Dockerfile
-**/docker-compose.yml
-**/tmp
+**/README.md
+**/Student API.postman_collection.json
+**/.gitignore
 **/*_test.go
-**/coverage.out
