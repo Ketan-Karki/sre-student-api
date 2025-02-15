@@ -31,5 +31,19 @@ USER 1001:1001
 # Application port
 EXPOSE 8080
 
+# Environment variables
+ENV PORT=8080 \
+    GIN_MODE=release \
+    DATABASE_URL=./api.db \
+    DATABASE_MAX_CONNECTIONS=10 \
+    DATABASE_MAX_IDLE_CONNECTIONS=5 \
+    DATABASE_MAX_LIFETIME=1h \
+    LOG_LEVEL=info \
+    ALLOWED_ORIGINS=* \
+    REDIS_URL=redis-cache:6379
+
+# Healthcheck
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 CMD nc -z redis-cache 6379 || exit 1
+
 # Runtime command
 ENTRYPOINT ["/app/main"]

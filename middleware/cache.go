@@ -19,8 +19,9 @@ var (
 )
 
 func InitRedis() {
+	redisUrl := os.Getenv("REDIS_URL")
 	rdb = redis.NewClient(&redis.Options{
-		Addr:     os.Getenv("REDIS_URL"),
+		Addr:     redisUrl,  // Use Redis container hostname
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
