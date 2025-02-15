@@ -3,7 +3,7 @@ FROM golang:1.23.5-alpine AS builder
 WORKDIR /app
 
 # Install only essential build dependencies
-RUN apk add --no-cache ca-certificates=20230525-r0 tzdata=20230525-r0
+RUN apk add --no-cache ca-certificates=20241121-r1 tzdata=2025a-r0
 
 # Copy dependency files
 COPY go.mod go.sum ./
