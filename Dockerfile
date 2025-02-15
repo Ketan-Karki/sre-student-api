@@ -23,7 +23,6 @@ WORKDIR /app
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /app/main /app/main
-COPY --from=builder /app/.env /app/.env
 
 # Security settings
 USER 1001:1001
