@@ -124,6 +124,30 @@ To run the Docker container, use the following command:
 docker run -d -p 8080:80 ketan-karki/student-api
 ```
 
+## CI/CD Pipeline
+
+This project uses GitHub Actions for continuous integration and deployment. The pipeline automatically builds and pushes Docker images to GitHub Container Registry (GHCR) when:
+- Changes are pushed to main/master branch
+- A new tag is created (v*)
+- A pull request is opened against main/master branch
+
+### Docker Image Tags
+
+The pipeline generates several types of tags for the Docker image:
+- Branch name (e.g., `main`, `feature-branch`)
+- Git commit SHA
+- Semantic version tags when a version tag is pushed (e.g., `v1.0.0`, `v1.0`, `v1`)
+
+### Accessing the Docker Image
+
+To pull the Docker image from GHCR:
+
+```bash
+docker pull ghcr.io/OWNER/REPO_NAME:tag
+```
+
+Replace `OWNER/REPO_NAME` with your GitHub username and repository name.
+
 ### Contribution Guidelines
 I welcome contributions to enhance the Student API. Please fork the repository and submit a pull request with your changes. Ensure your code adheres to the project's coding standards and includes appropriate tests.
 
