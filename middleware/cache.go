@@ -89,7 +89,10 @@ func CacheMiddleware(ttl time.Duration) gin.HandlerFunc {
 					}
 				}
 				c.Writer.WriteHeader(resp.Status)
-				c.Writer.Write(resp.Body)
+				if _, err := c.Writer.Write(resp.Body); err != nil {
+					log.Printf("Error writing cached response: %v", err)
+					return
+				}
 				log.Println("Returned cached response for key:", cacheKey)
 				c.Abort()
 				return

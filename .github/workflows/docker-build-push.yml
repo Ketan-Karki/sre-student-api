@@ -41,14 +41,13 @@ jobs:
       - name: Run Tests
         run: go test -v ./...
 
-      - name: Install golangci-lint
+      - name: Install and run golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
           version: latest
           args: --timeout=5m
-
-      - name: Run golangci-lint
-        run: golangci-lint run ./...
+          skip-pkg-cache: true
+          skip-build-cache: true
 
   docker:
     name: Build and Push Container Images
