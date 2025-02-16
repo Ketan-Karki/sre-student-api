@@ -16,8 +16,16 @@ import (
 )
 
 func main() {
-	middleware.InitRedis()
-	db.InitDB()
+	// Initialize Redis
+	if err := middleware.InitRedis(); err != nil {
+		log.Fatalf("Failed to initialize Redis: %v", err)
+	}
+
+	// Initialize Database
+	if err := db.InitDB(); err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+
 	server := gin.Default()
 
 	server.Use(middleware.CacheMiddleware(time.Minute))

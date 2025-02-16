@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -18,13 +19,28 @@ var (
 	rdb *redis.Client
 )
 
-func InitRedis() {
-	redisUrl := os.Getenv("REDIS_URL")
+func InitRedis() error {
+	redisHost := os.Getenv("REDIS_HOST")
+	if redisHost == "" {
+		redisHost = "localhost"
+	}
+	redisAddr := fmt.Sprintf("%s:6379", redisHost)
+	log.Printf("Connecting to Redis at %s", redisAddr)
+	
 	rdb = redis.NewClient(&redis.Options{
-		Addr:     redisUrl,  // Use Redis container hostname
-		Password: "", // no password set
-		DB:       0,  // use default DB
+		Addr:     redisAddr,
+		Password: "",
+		DB:       0,
 	})
+
+	// Test the connection
+	_, err := rdb.Ping(ctx).Result()
+	if err != nil {
+		return fmt.Errorf("failed to connect to Redis: %w", err)
+	}
+	
+	log.Printf("Successfully connected to Redis at %s", redisAddr)
+	return nil
 }
 
 type cachedResponse struct {
@@ -45,6 +61,17 @@ func (w *responseWriter) Write(b []byte) (int, error) {
 
 func CacheMiddleware(ttl time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Skip caching for non-GET requests
+		if c.Request.Method != "GET" {
+			// For POST/PUT/DELETE requests, invalidate the list cache
+			if c.Request.Method == "POST" || c.Request.Method == "PUT" || c.Request.Method == "DELETE" {
+				log.Println("Invalidating cache for /api/v1/students")
+				rdb.Del(ctx, "/api/v1/students")
+			}
+			c.Next()
+			return
+		}
+
 		// Generate cache key
 		cacheKey := c.Request.URL.String()
 		log.Println("Cache key:", cacheKey)
@@ -83,31 +110,20 @@ func CacheMiddleware(ttl time.Duration) gin.HandlerFunc {
 		// Continue processing the request
 		c.Next()
 
-		// Capture the response body
-		responseBody := writer.body.Bytes()
-
-		// Cache the response if status code is 200
+		// Cache the response
 		if c.Writer.Status() == http.StatusOK {
 			resp := cachedResponse{
 				Status:  c.Writer.Status(),
 				Headers: c.Writer.Header(),
-				Body:    responseBody,
+				Body:    writer.body.Bytes(),
 			}
-
-			data, err := json.Marshal(resp)
-			if err == nil {
-				err := rdb.Set(ctx, cacheKey, data, ttl).Err()
-				if err == nil {
-					log.Println("Cached response for key:", cacheKey)
-				} else {
+			if data, err := json.Marshal(resp); err == nil {
+				if err := rdb.Set(ctx, cacheKey, data, ttl).Err(); err != nil {
 					log.Println("Failed to cache response for key:", cacheKey, "Error:", err)
+				} else {
+					log.Println("Cached response for key:", cacheKey)
 				}
-			} else {
-				log.Println("Failed to marshal response for key:", cacheKey, "Error:", err)
 			}
-		} else {
-			log.Println("Did not cache response for key:", cacheKey, "Status code:", c.Writer.Status())
 		}
-		log.Println("Finished processing request for key:", cacheKey)
 	}
 }

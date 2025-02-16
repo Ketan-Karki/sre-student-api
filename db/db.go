@@ -3,37 +3,49 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 
-	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 var DB *sql.DB
 
 func InitDB() error {
-	err := godotenv.Load()
-	if err != nil {
-		return fmt.Errorf("failed to load .env file: %w", err)
-	}
-
 	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		dbURL = "api.db" // fallback to local file
+	}
+	log.Printf("Initializing database with URL: %s", dbURL)
 
-	var err2 error
-	DB, err2 = sql.Open("sqlite3", dbURL)
-
-	if err2 != nil {
-		return fmt.Errorf("failed to connect to database: %w", err2)
+	var err error
+	DB, err = sql.Open("sqlite3", dbURL)
+	if err != nil {
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
+	// Set connection pool settings
 	DB.SetMaxOpenConns(10)
 	DB.SetMaxIdleConns(5)
 
-	return createTables()
+	// Test the connection
+	err = DB.Ping()
+	if err != nil {
+		return fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	// Create tables
+	err = createTables()
+	if err != nil {
+		return fmt.Errorf("failed to create tables: %w", err)
+	}
+
+	log.Printf("Successfully initialized database at %s", dbURL)
+	return nil
 }
 
 func createTables() error {
-	createStudentsTable := `
+	query := `
 	CREATE TABLE IF NOT EXISTS students (
 		id TEXT PRIMARY KEY,
 		name TEXT NOT NULL,
@@ -41,9 +53,10 @@ func createTables() error {
 		grade INTEGER NOT NULL
 	);`
 
-	_, err := DB.Exec(createStudentsTable)
+	_, err := DB.Exec(query)
 	if err != nil {
 		return fmt.Errorf("failed to create students table: %w", err)
 	}
+
 	return nil
 }

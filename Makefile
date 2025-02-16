@@ -7,7 +7,7 @@ VERSION=1.0.0
 NETWORK_NAME=student-api-network
 
 # Targets
-.PHONY: all build run clean migrate docker-build docker-run network redis-start redis-cli
+.PHONY: all build run clean migrate docker-build docker-run network redis-start redis-cli up down logs ps
 
 all: build
 
@@ -39,3 +39,16 @@ docker-build:
 
 docker-run: redis-start
 	docker run --network $(NETWORK_NAME) -p 8080:8080 ketan-karki/student-api:$(VERSION)
+
+# Docker Compose commands
+up:
+	docker-compose up --build -d
+
+down:
+	docker-compose down
+
+logs:
+	docker-compose logs -f
+
+ps:
+	docker-compose ps

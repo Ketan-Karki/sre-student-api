@@ -2,7 +2,6 @@ package routes
 
 import (
 	"net/http"
-
 	"log"
 
 	"example.com/sre-bootcamp-rest-api/models"
@@ -18,7 +17,15 @@ func getStudents(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Could not fetch students. Try again later."})
 		return
 	}
-	c.JSON(http.StatusOK, students)
+
+	if students == nil {
+		students = []models.Student{} // Return empty array instead of null
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"students": students,
+		"count":   len(students),
+	})
 }
 
 func getStudent(c *gin.Context) {
@@ -32,7 +39,9 @@ func getStudent(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, student)
+	c.JSON(http.StatusOK, gin.H{
+		"student": student,
+	})
 }
 
 func createStudent(c *gin.Context) {
@@ -42,19 +51,29 @@ func createStudent(c *gin.Context) {
 
 	if err != nil {
 		log.Println("Error binding JSON:", err)
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Could not parse request data."})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Could not parse request data.",
+			"error":   err.Error(),
+		})
 		return
 	}
 
 	student.ID = uuid.New().String()
+	log.Printf("Generated new student ID: %s", student.ID)
 
 	if err := student.Save(); err != nil {
 		log.Println("Error saving student:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Could not create student. Try again later."})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Could not create student. Try again later.",
+			"error":   err.Error(),
+		})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Student created successfully!", "student": student})
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Student created successfully!",
+		"student": student,
+	})
 }
 
 func updateStudent(c *gin.Context) {
@@ -71,7 +90,10 @@ func updateStudent(c *gin.Context) {
 	err = c.ShouldBindJSON(&student)
 	if err != nil {
 		log.Println("Error binding JSON:", err)
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Could not parse request data."})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Could not parse request data.",
+			"error":   err.Error(),
+		})
 		return
 	}
 
@@ -79,11 +101,17 @@ func updateStudent(c *gin.Context) {
 	err = student.Update()
 	if err != nil {
 		log.Println("Error updating student:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Could not update student. Try again later."})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Could not update student. Try again later.",
+			"error":   err.Error(),
+		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Student updated successfully!", "student": student})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Student updated successfully!",
+		"student": student,
+	})
 }
 
 func deleteStudent(c *gin.Context) {
@@ -99,9 +127,14 @@ func deleteStudent(c *gin.Context) {
 	err = student.Delete()
 	if err != nil {
 		log.Println("Error deleting student:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Could not delete student. Try again later."})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Could not delete student. Try again later.",
+			"error":   err.Error(),
+		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Student deleted successfully!"})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Student deleted successfully!",
+	})
 }
