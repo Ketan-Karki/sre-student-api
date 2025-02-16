@@ -40,9 +40,40 @@ docker-build:
 docker-run: redis-start
 	docker run --network $(NETWORK_NAME) -p 8080:8080 ketan-karki/student-api:$(VERSION)
 
+# Check if database exists and is ready
+check-db:
+	@if [ ! -f ./data/api.db ]; then \
+		mkdir -p ./data; \
+		touch ./data/api.db; \
+		echo "Created new SQLite database"; \
+	else \
+		echo "SQLite database exists"; \
+	fi
+
+# Check and apply migrations
+check-migrations: check-db
+	@echo "Checking and applying database migrations..."
+	@$(GO) run -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@latest \
+		-path ./migrations \
+		-database "sqlite3://./data/api.db" \
+		up
+
 # Docker Compose commands
-up:
+up: check-migrations
 	docker-compose up --build -d
+	@echo "Waiting for services to be healthy..."
+	@timeout=60; \
+	elapsed=0; \
+	while [ $$elapsed -lt $$timeout ]; do \
+		if docker-compose ps | grep -q "healthy"; then \
+			echo "Services are healthy!"; \
+			exit 0; \
+		fi; \
+		sleep 5; \
+		elapsed=$$((elapsed + 5)); \
+		echo "Still waiting for services... ($$elapsed seconds)"; \
+	done; \
+	echo "Warning: Timeout waiting for services to be healthy"
 
 down:
 	docker-compose down
