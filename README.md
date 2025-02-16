@@ -46,6 +46,71 @@ To set up the project locally, follow these steps:
 
 ## Prerequisites
 - Ensure that you have Docker installed on your machine.
+- Ensure that you have Make installed on your machine.
+
+## Make Targets
+
+To manage and run the application using Make, you can use the following targets:
+
+- **build**: Build the Docker image for the application.
+  ```bash
+  make build
+  ```
+
+- **network**: Create a Docker network for the application.
+  ```bash
+  make network
+  ```
+
+- **redis-start**: Start a Redis container connected to the application network.
+  ```bash
+  make redis-start
+  ```
+
+- **run**: Build the application and start it along with the Redis container.
+  ```bash
+  make run
+  ```
+
+- **clean**: Remove the application binary, stop Redis, and remove the network.
+  ```bash
+  make clean
+  ```
+
+- **migrate**: Run database migrations.
+  ```bash
+  make migrate
+  ```
+
+- **docker-build**: Build the Docker image for the application.
+  ```bash
+  make docker-build
+  ```
+
+- **docker-run**: Start the application using Docker.
+  ```bash
+  make docker-run
+  ```
+
+- **up**: Use Docker Compose to build and start the application in detached mode.
+  ```bash
+  make up
+  ```
+
+- **down**: Stop the application and remove containers.
+  ```bash
+  make down
+  ```
+
+- **logs**: View logs from the running containers.
+  ```bash
+  make logs
+  ```
+
+- **ps**: List running containers.
+  ```bash
+  make ps
+  ```
 
 ## Building the Docker Image
 To build the Docker image, run the following command in the root of the project:
