@@ -41,6 +41,11 @@ func TestGetAllStudents(t *testing.T) {
 	defer mockDB.Close()
 	db.DB = mockDB
 
+	// Mock the table check query
+	tableCheckRows := sqlmock.NewRows([]string{"name"}).AddRow("students")
+	mock.ExpectQuery("SELECT name FROM sqlite_master").
+		WillReturnRows(tableCheckRows)
+
 	rows := sqlmock.NewRows([]string{"id", "name", "age", "grade"}).
 		AddRow("1", "John Doe", 20, 10).
 		AddRow("2", "Jane Doe", 22, 12)
