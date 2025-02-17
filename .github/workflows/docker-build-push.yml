@@ -35,6 +35,7 @@ on:
       - 'go.sum'
   schedule:
     - cron: "0 0 * * 1" # Run every Monday at midnight
+  workflow_dispatch:
 
 env:
   GHCR_REGISTRY: ghcr.io
