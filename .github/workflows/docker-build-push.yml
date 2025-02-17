@@ -24,7 +24,7 @@ env:
 jobs:
   build-and-test:
     name: Build, Test, and Lint
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -52,7 +52,7 @@ jobs:
   docker:
     name: Build and Push Container Images
     needs: build-and-test
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
