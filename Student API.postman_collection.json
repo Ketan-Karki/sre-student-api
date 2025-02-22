@@ -8,6 +8,19 @@
 	"item": [
 		{
 			"name": "Create Student",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "POST",
 				"header": [],
@@ -28,6 +41,8 @@
 					],
 					"port": "8080",
 					"path": [
+						"api",
+						"v1",
 						"students"
 					]
 				}
@@ -36,6 +51,19 @@
 		},
 		{
 			"name": "Get Students",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "GET",
 				"header": [],
@@ -47,6 +75,8 @@
 					],
 					"port": "8080",
 					"path": [
+						"api",
+						"v1",
 						"students"
 					]
 				}
@@ -55,6 +85,19 @@
 		},
 		{
 			"name": "Get Single Student",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "GET",
 				"header": [],
@@ -66,6 +109,8 @@
 					],
 					"port": "8080",
 					"path": [
+						"api",
+						"v1",
 						"students",
 						"b20d48f8-1497-4601-9d0f-ccc07ce0eaa4"
 					]
@@ -75,6 +120,19 @@
 		},
 		{
 			"name": "Update Student",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "PUT",
 				"header": [],
@@ -95,6 +153,8 @@
 					],
 					"port": "8080",
 					"path": [
+						"api",
+						"v1",
 						"students",
 						"0e4f9a2b-9041-450f-bc21-e33c496d0687"
 					]
@@ -104,6 +164,19 @@
 		},
 		{
 			"name": "Delete Student",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "DELETE",
 				"header": [],
@@ -115,6 +188,8 @@
 					],
 					"port": "8080",
 					"path": [
+						"api",
+						"v1",
 						"students",
 						"0e4f9a2b-9041-450f-bc21-e33c496d0687"
 					]
