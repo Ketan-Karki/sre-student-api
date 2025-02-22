@@ -46,13 +46,13 @@ test-api: up
 	@sleep 10
 	@echo "\nTesting API endpoints..."
 	@echo "\n1. Testing GET /api/v1/students (should be empty initially)"
-	@curl -s -w "\nStatus: %{http_code}\n" http://localhost/api/v1/students
+	@curl -s -w "\nStatus: %{http_code}\n" http://localhost:8080/api/v1/students
 	@echo "\n\n2. Testing POST /api/v1/students (creating a new student)"
-	@curl -s -w "\nStatus: %{http_code}\n" -X POST http://localhost/api/v1/students \
+	@curl -s -w "\nStatus: %{http_code}\n" -X POST http://localhost:8080/api/v1/students \
 		-H "Content-Type: application/json" \
 		-d '{"name":"Test Student","age":20,"grade":"A+"}'
 	@echo "\n\n3. Testing GET /api/v1/students again (should show the new student)"
-	@curl -s -w "\nStatus: %{http_code}\n" http://localhost/api/v1/students
+	@curl -s -w "\nStatus: %{http_code}\n" http://localhost:8080/api/v1/students
 	@echo "\n\nAPI tests completed. Check the responses above."
 
 # Cleans up the application and Docker resources
