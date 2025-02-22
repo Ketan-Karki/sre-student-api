@@ -16,11 +16,6 @@ import (
 )
 
 func main() {
-	// Initialize Redis
-	if err := middleware.InitRedis(); err != nil {
-		log.Fatalf("Failed to initialize Redis: %v", err)
-	}
-
 	// Initialize Database
 	if err := db.InitDB(); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
@@ -50,9 +45,9 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Server shutdown error: %v", err)
+		log.Fatal("Server forced to shutdown:", err)
 	}
-	log.Println("Server gracefully stopped")
+
+	log.Println("Server exiting")
 }

@@ -10,14 +10,14 @@ import (
 )
 
 type Student struct {
-	ID    string `json:"id"`
+	ID    string `json:"id,omitempty"`
 	Name  string `json:"name" binding:"required"`
 	Age   int    `json:"age" binding:"required"`
-	Grade int    `json:"grade" binding:"required"`
+	Grade string `json:"grade" binding:"required"`
 }
 
 func (s *Student) Save() error {
-	if s.Name == "" || s.Age == 0 || s.Grade == 0 {
+	if s.Name == "" || s.Age == 0 || s.Grade == "" {
 		return errors.New("invalid student data")
 	}
 
@@ -26,8 +26,8 @@ func (s *Student) Save() error {
 		s.ID = uuid.New().String()
 	}
 
-	query := "INSERT INTO students (id, name, age, grade) VALUES (?, ?, ?, ?)"
-	log.Printf("Executing INSERT query: %s with values: [%s, %s, %d, %d]", query, s.ID, s.Name, s.Age, s.Grade)
+	query := "INSERT INTO students (id, name, age, grade) VALUES ($1, $2, $3, $4)"
+	log.Printf("Executing INSERT query: %s with values: [%s, %s, %d, %s]", query, s.ID, s.Name, s.Age, s.Grade)
 	
 	result, err := db.DB.Exec(query, s.ID, s.Name, s.Age, s.Grade)
 	if err != nil {
@@ -51,26 +51,6 @@ func (s *Student) Save() error {
 func GetAllStudents() ([]Student, error) {
 	if db.DB == nil {
 		return nil, errors.New("database connection not initialized")
-	}
-
-	// First, let's check if the table exists
-	var tableName string
-	err := db.DB.QueryRow("SELECT name FROM sqlite_master WHERE type='table' AND name='students'").Scan(&tableName)
-	if err != nil {
-		log.Printf("Table check error: %v", err)
-		// Table might not exist, let's create it
-		createTableSQL := `
-		CREATE TABLE IF NOT EXISTS students (
-			id TEXT PRIMARY KEY,
-			name TEXT NOT NULL,
-			age INTEGER NOT NULL,
-			grade INTEGER NOT NULL
-		);`
-		_, err = db.DB.Exec(createTableSQL)
-		if err != nil {
-			log.Printf("Error creating table: %v", err)
-			return nil, fmt.Errorf("failed to create table: %w", err)
-		}
 	}
 
 	query := "SELECT id, name, age, grade FROM students"
@@ -100,7 +80,6 @@ func GetAllStudents() ([]Student, error) {
 		return nil, fmt.Errorf("error iterating student rows: %w", err)
 	}
 
-	log.Printf("Successfully retrieved %d students", len(students))
 	return students, nil
 }
 
@@ -109,13 +88,11 @@ func GetStudentByID(id string) (*Student, error) {
 		return nil, errors.New("database connection not initialized")
 	}
 
-	query := "SELECT id, name, age, grade FROM students WHERE id = ?"
+	query := "SELECT id, name, age, grade FROM students WHERE id = $1"
 	log.Printf("Executing SELECT query: %s with value: %s", query, id)
 	
-	row := db.DB.QueryRow(query, id)
-
 	var student Student
-	err := row.Scan(&student.ID, &student.Name, &student.Age, &student.Grade)
+	err := db.DB.QueryRow(query, id).Scan(&student.ID, &student.Name, &student.Age, &student.Grade)
 	if err != nil {
 		log.Printf("Error scanning row: %v", err)
 		return nil, fmt.Errorf("failed to scan student row: %w", err)
@@ -126,12 +103,12 @@ func GetStudentByID(id string) (*Student, error) {
 }
 
 func (s *Student) Update() error {
-	if s.Name == "" || s.Age == 0 || s.Grade == 0 {
+	if s.Name == "" || s.Age == 0 || s.Grade == "" {
 		return errors.New("invalid student data")
 	}
 
-	query := "UPDATE students SET name = ?, age = ?, grade = ? WHERE id = ?"
-	log.Printf("Executing UPDATE query: %s with values: [%s, %d, %d, %s]", query, s.Name, s.Age, s.Grade, s.ID)
+	query := "UPDATE students SET name = $1, age = $2, grade = $3 WHERE id = $4"
+	log.Printf("Executing UPDATE query: %s with values: [%s, %d, %s, %s]", query, s.Name, s.Age, s.Grade, s.ID)
 	
 	result, err := db.DB.Exec(query, s.Name, s.Age, s.Grade, s.ID)
 	if err != nil {
@@ -157,7 +134,11 @@ func (s *Student) Delete() error {
 		return errors.New("database connection not initialized")
 	}
 
-	query := "DELETE FROM students WHERE id = ?"
+	if s.ID == "" {
+		return errors.New("student ID is required")
+	}
+
+	query := "DELETE FROM students WHERE id = $1"
 	log.Printf("Executing DELETE query: %s with value: %s", query, s.ID)
 	
 	result, err := db.DB.Exec(query, s.ID)

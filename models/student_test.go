@@ -16,7 +16,7 @@ func TestStudent_Save(t *testing.T) {
 	defer mockDB.Close()
 	db.DB = mockDB
 
-	student := &Student{ID: "1", Name: "John Doe", Age: 20, Grade: 10}
+	student := &Student{ID: "1", Name: "John Doe", Age: 20, Grade: "A+"}
 
 	// Successful Insert
 	mock.ExpectExec("INSERT INTO students").
@@ -47,8 +47,8 @@ func TestGetAllStudents(t *testing.T) {
 		WillReturnRows(tableCheckRows)
 
 	rows := sqlmock.NewRows([]string{"id", "name", "age", "grade"}).
-		AddRow("1", "John Doe", 20, 10).
-		AddRow("2", "Jane Doe", 22, 12)
+		AddRow("1", "John Doe", 20, "A+").
+		AddRow("2", "Jane Doe", 22, "A")
 
 	mock.ExpectQuery("SELECT id, name, age, grade FROM students").
 		WillReturnRows(rows)
@@ -66,7 +66,7 @@ func TestGetStudentByID(t *testing.T) {
 
 	// Successful Fetch
 	row := sqlmock.NewRows([]string{"id", "name", "age", "grade"}).
-		AddRow("1", "John Doe", 20, 10)
+		AddRow("1", "John Doe", 20, "A+")
 	mock.ExpectQuery("SELECT id, name, age, grade FROM students WHERE id = ?").
 		WithArgs("1").
 		WillReturnRows(row)
@@ -91,7 +91,7 @@ func TestStudent_Update(t *testing.T) {
 	defer mockDB.Close()
 	db.DB = mockDB
 
-	student := &Student{ID: "1", Name: "Updated Name", Age: 21, Grade: 11}
+	student := &Student{ID: "1", Name: "Updated Name", Age: 21, Grade: "A+"}
 
 	// Successful Update
 	mock.ExpectExec(`UPDATE students SET name = \?, age = \?, grade = \? WHERE id = \?`).
