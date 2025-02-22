@@ -6,16 +6,16 @@ on:
       - main
       - master
     paths:
-      - "*.go"
-      - "middleware/**"
-      - "models/**"
-      - "routes/**"
-      - "migrations/**"
-      - "db/**"
-      - "Dockerfile"
-      - "docker-compose.yml"
-      - "go.mod"
-      - "go.sum"
+      - '*.go'
+      - 'middleware/**'
+      - 'models/**'
+      - 'routes/**'
+      - 'migrations/**'
+      - 'db/**'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'go.mod'
+      - 'go.sum'
     tags:
       - "v*"
   pull_request:
@@ -23,16 +23,16 @@ on:
       - main
       - master
     paths:
-      - "*.go"
-      - "middleware/**"
-      - "models/**"
-      - "routes/**"
-      - "migrations/**"
-      - "db/**"
-      - "Dockerfile"
-      - "docker-compose.yml"
-      - "go.mod"
-      - "go.sum"
+      - '*.go'
+      - 'middleware/**'
+      - 'models/**'
+      - 'routes/**'
+      - 'migrations/**'
+      - 'db/**'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'go.mod'
+      - 'go.sum'
   schedule:
     - cron: "0 0 * * 1" # Run every Monday at midnight
   workflow_dispatch:
@@ -71,9 +71,6 @@ jobs:
           args: --timeout=5m --out-format=colored-line-number
           skip-pkg-cache: true
           skip-build-cache: true
-
-      - name: Copy Nginx Configuration
-        run: cp nginx.conf /etc/nginx/nginx.conf
 
   docker:
     name: Build and Push Container Images
