@@ -70,8 +70,7 @@ func CacheMiddleware(ttl time.Duration) gin.HandlerFunc {
 		if entry, exists := cache[key]; exists && time.Now().Before(entry.expiration) {
 			cacheLock.RUnlock()
 			var cached cachedResponse
-			var err error
-			err = json.Unmarshal(entry.data, &cached)
+			err := json.Unmarshal(entry.data, &cached)
 			if err != nil {
 				log.Printf("Failed to unmarshal cached response: %v", err)
 			} else {
@@ -81,7 +80,9 @@ func CacheMiddleware(ttl time.Duration) gin.HandlerFunc {
 						c.Writer.Header().Add(k, val)
 					}
 				}
-				c.Writer.Write(cached.Body)
+				if _, err := c.Writer.Write(cached.Body); err != nil {
+					log.Printf("Error writing cached response: %v", err)
+				}
 				c.Abort()
 				return
 			}
@@ -90,11 +91,11 @@ func CacheMiddleware(ttl time.Duration) gin.HandlerFunc {
 		}
 
 		// Cache miss, capture the response
-		w := &responseWriter{
+		writer := &responseWriter{
 			ResponseWriter: c.Writer,
 			body:          &bytes.Buffer{},
 		}
-		c.Writer = w
+		c.Writer = writer
 		c.Next()
 
 		// Store in cache
@@ -102,9 +103,12 @@ func CacheMiddleware(ttl time.Duration) gin.HandlerFunc {
 			resp := cachedResponse{
 				Status:  c.Writer.Status(),
 				Headers: c.Writer.Header(),
-				Body:    w.body.Bytes(),
+				Body:    writer.body.Bytes(),
 			}
-			if data, err := json.Marshal(resp); err == nil {
+			data, err := json.Marshal(resp)
+			if err != nil {
+				log.Printf("Error marshaling cached response: %v", err)
+			} else {
 				cacheLock.Lock()
 				cache[key] = cacheEntry{
 					data:       data,
