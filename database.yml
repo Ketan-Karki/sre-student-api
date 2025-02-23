@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sre-bootcamp
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-config
+  namespace: sre-bootcamp
+data:
+  db.conf: |
+    [postgresql]
+    host = localhost
+    port = 5432
+    database = myapp_db
+    user = admin
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-secret
+  namespace: sre-bootcamp
+data:
+  password: c2VjcmV0Cg==
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-deployment
+  namespace: sre-bootcamp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:13
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: password
+        envFrom:
+        - configMapRef:
+            name: db-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-service
+  namespace: sre-bootcamp
+spec:
+  selector:
+    app: postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP
