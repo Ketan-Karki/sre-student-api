@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: application
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: database
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-services
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sample-app
+  namespace: application
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: node-role
+            operator: In
+            values:
+            - application
+  containers:
+  - name: nginx
+    image: nginx:latest
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sample-db
+  namespace: database
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: node-role
+            operator: In
+            values:
+            - database
+  containers:
+  - name: postgres
+    image: postgres:latest
+    env:
+    - name: POSTGRES_PASSWORD
+      value: "mysecretpassword"
+    - name: POSTGRES_DB
+      value: "testdb"
+    - name: POSTGRES_USER
+      value: "postgres"
+    ports:
+    - containerPort: 5432
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
