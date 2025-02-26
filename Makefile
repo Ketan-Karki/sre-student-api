@@ -7,14 +7,14 @@ VERSION=1.0.0
 NETWORK_NAME=student-api-network
 
 # Targets
-.PHONY: all build run clean test up down logs ps test-api
+.PHONY: all build run clean test up down logs ps test-api test-api-k8s
 
 # Default target that builds the application
 all: build
 
 # Builds the Docker image for the application
 build:
-	docker build -t ketan-karki/student-api:$(VERSION) .
+	docker build --platform linux/arm64 -t ketan-karki/student-api:$(VERSION) .
 
 # Creates a Docker network for the application
 network:
@@ -45,6 +45,19 @@ test-api: up
 	@echo "Waiting for services to be ready..."
 	@sleep 10
 	@echo "\nTesting API endpoints..."
+	@echo "\n1. Testing GET /api/v1/students (should be empty initially)"
+	@curl -s -w "\nStatus: %{http_code}\n" http://localhost:8080/api/v1/students
+	@echo "\n\n2. Testing POST /api/v1/students (creating a new student)"
+	@curl -s -w "\nStatus: %{http_code}\n" -X POST http://localhost:8080/api/v1/students \
+		-H "Content-Type: application/json" \
+		-d '{"name":"Test Student","age":20,"grade":"A+"}'
+	@echo "\n\n3. Testing GET /api/v1/students again (should show the new student)"
+	@curl -s -w "\nStatus: %{http_code}\n" http://localhost:8080/api/v1/students
+	@echo "\n\nAPI tests completed. Check the responses above."
+
+# Test API endpoints in Kubernetes
+test-api-k8s:
+	@echo "\nTesting API endpoints in Kubernetes..."
 	@echo "\n1. Testing GET /api/v1/students (should be empty initially)"
 	@curl -s -w "\nStatus: %{http_code}\n" http://localhost:8080/api/v1/students
 	@echo "\n\n2. Testing POST /api/v1/students (creating a new student)"

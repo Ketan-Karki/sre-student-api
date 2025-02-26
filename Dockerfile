@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.23.5-alpine AS builder
+FROM --platform=linux/arm64 golang:1.23.5-alpine AS builder
 WORKDIR /app
 
 # Install build dependencies
@@ -16,7 +16,7 @@ COPY . .
 RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-w -s" -o /app/main .
 
 # Runtime stage
-FROM alpine:3.19
+FROM --platform=linux/arm64 alpine:3.19
 WORKDIR /app
 
 # Install runtime dependencies
