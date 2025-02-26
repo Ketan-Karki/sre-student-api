@@ -15,14 +15,12 @@ spec:
     spec:
       containers:
         - name: student-api
-          image: ketan-karki/student-api:1.0.0 # Updated to match Makefile's image name
+          image: ketan-karki/student-api:1.0.0
           ports:
             - containerPort: 8080
-          env:
-            - name: DATABASE_URL
-              value: "postgresql://postgres:postgres@postgres:5432/studentsdb?sslmode=disable"
-            - name: GIN_MODE
-              value: "release"
+          envFrom:
+            - configMapRef:
+                name: student-api-config
           resources:
             limits:
               memory: "256Mi"
@@ -34,11 +32,15 @@ spec:
             httpGet:
               path: /api/v1/healthcheck
               port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 10
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /api/v1/healthcheck
               port: 8080
             initialDelaySeconds: 5
-            periodSeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 2

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: student-api-config
+  namespace: student-api
+data:
+  PORT: "8080"
+  GIN_MODE: "release"
+  TZ: "Asia/Kolkata"
+  DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/studentsdb?sslmode=disable"
