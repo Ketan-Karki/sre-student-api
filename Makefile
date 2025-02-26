@@ -47,6 +47,9 @@ get-service-url:
 # Deploy to Kubernetes
 k8s-deploy:
 	kubectl apply -f k8s/config/app-config.yaml
+	kubectl apply -f k8s/config/db-secrets.yaml
+	kubectl apply -f k8s/postgres/deployment.yaml
+	kubectl apply -f k8s/postgres/service.yaml
 	kubectl apply -f k8s/student-api/deployment.yaml
 	kubectl apply -f k8s/student-api/service.yaml
 
@@ -97,3 +100,6 @@ clean:
 	docker network rm $(NETWORK_NAME) 2>/dev/null || true
 	kubectl delete -f k8s/student-api/deployment.yaml 2>/dev/null || true
 	kubectl delete -f k8s/config/app-config.yaml 2>/dev/null || true
+	kubectl delete -f k8s/config/db-secrets.yaml 2>/dev/null || true
+	kubectl delete -f k8s/postgres/deployment.yaml 2>/dev/null || true
+	kubectl delete -f k8s/postgres/service.yaml 2>/dev/null || true

@@ -7,4 +7,3 @@ data:
   PORT: "8080"
   GIN_MODE: "release"
   TZ: "Asia/Kolkata"
-  DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/studentsdb?sslmode=disable"

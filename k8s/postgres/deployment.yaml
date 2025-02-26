@@ -20,13 +20,12 @@ spec:
           image: postgres:latest
           ports:
             - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: postgres-secrets
           env:
             - name: POSTGRES_DB
               value: "studentsdb"
-            - name: POSTGRES_USER
-              value: "postgres"
-            - name: POSTGRES_PASSWORD
-              value: "postgres"
           resources:
             limits:
               memory: "512Mi"
