@@ -124,6 +124,82 @@ To run the Docker container, use the following command:
 docker run -d -p 8080:80 ketan-karki/student-api
 ```
 
+## Kubernetes Deployment
+
+### Prerequisites
+- Kubernetes cluster (local or cloud-based)
+- kubectl configured to interact with your cluster
+- Helm (optional, for package management)
+
+### Deployment Steps
+
+1. **Create Required Namespaces:**
+   ```bash
+   kubectl apply -f k8s/namespaces/namespaces.yaml
+   ```
+
+2. **Deploy Database:**
+   ```bash
+   # Create Postgres secrets and config
+   kubectl apply -f k8s/config/db-secrets.yaml
+   
+   # Deploy Postgres
+   kubectl apply -f k8s/postgres/pv.yaml
+   kubectl apply -f k8s/postgres/deployment.yaml
+   kubectl apply -f k8s/postgres/service.yaml
+   ```
+
+3. **Deploy Application:**
+   ```bash
+   # Create application config
+   kubectl apply -f k8s/config/app-config.yaml
+   
+   # Deploy Student API
+   kubectl apply -f k8s/student-api/deployment.yaml
+   kubectl apply -f k8s/student-api/service.yaml
+   ```
+
+4. **Verify Deployment:**
+   ```bash
+   kubectl get pods -n student-api
+   kubectl get svc -n student-api
+   ```
+
+### Accessing the Application
+
+The application is exposed through a ClusterIP service. To access it:
+
+1. **Using Port Forward:**
+   ```bash
+   kubectl port-forward svc/student-api 8080:8080 -n student-api
+   ```
+
+2. **Through Ingress (if configured):**
+   Access via your configured domain name
+
+### Monitoring the Deployment
+
+Check deployment status:
+```bash
+kubectl get deployments -n student-api
+kubectl get pods -n student-api
+kubectl logs -f deployment/student-api -n student-api
+```
+
+### Scaling the Application
+
+Scale the number of replicas:
+```bash
+kubectl scale deployment student-api --replicas=5 -n student-api
+```
+
+### Cleanup
+
+To remove all deployed resources:
+```bash
+kubectl delete namespace student-api
+```
+
 ## CI/CD Pipeline
 
 This project uses GitHub Actions for continuous integration and deployment. The pipeline automatically builds and pushes Docker images to GitHub Container Registry (GHCR) when:
