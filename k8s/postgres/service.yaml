@@ -3,10 +3,14 @@ kind: Service
 metadata:
   name: postgres
   namespace: student-api
+  labels:                   # Add service labels
+    app: postgres
+    tier: database
 spec:
   selector:
     app: postgres
   ports:
-    - protocol: TCP
+    - name: postgresql     # Add descriptive port name
+      protocol: TCP
       port: 5432
       targetPort: 5432

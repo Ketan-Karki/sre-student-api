@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: student-api
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    # Add cloud-specific internal LB annotations as needed
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080
