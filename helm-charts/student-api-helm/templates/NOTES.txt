@@ -1,0 +1,26 @@
+Thank you for installing {{ .Chart.Name }}.
+
+Your release is named {{ .Release.Name }}.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }}
+  $ helm get all {{ .Release.Name }}
+
+The application has been deployed to namespace: {{ .Values.namespace.name }}
+
+{{- if contains "LoadBalancer" .Values.nginx.service.type }}
+To get the application URL, run:
+  export SERVICE_IP=$(kubectl get svc -n {{ .Values.namespace.name }} nginx-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+  echo http://$SERVICE_IP
+{{- else if contains "ClusterIP" .Values.nginx.service.type }}
+To access the application, run:
+  kubectl port-forward -n {{ .Values.namespace.name }} svc/nginx-service 8080:80
+  Then visit http://localhost:8080
+{{- end }}
+
+Database connection details:
+  Host: postgres-service
+  Port: {{ .Values.postgres.service.port }}
+  Database: {{ .Values.postgres.database.name }}
+  Username: {{ .Values.postgres.database.user }}

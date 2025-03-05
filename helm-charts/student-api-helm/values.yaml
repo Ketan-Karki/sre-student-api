@@ -1,0 +1,67 @@
+# Global settings
+nameOverride: ""
+fullnameOverride: ""
+
+# Namespace configuration
+namespace:
+  create: true
+  name: "student-api"
+
+# Student API configuration
+studentApi:
+  image:
+    repository: ketan-karki/student-api
+    tag: 1.0.0
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  service:
+    type: ClusterIP
+    port: 8080
+
+# PostgreSQL configuration
+postgres:
+  image:
+    repository: postgres
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  service:
+    type: ClusterIP
+    port: 5432
+  persistence:
+    enabled: true
+    size: 1Gi
+  
+  # Database credentials
+  database:
+    name: api
+    user: postgres
+    password: postgres
+
+# NGINX configuration
+nginx:
+  enabled: true
+  image:
+    repository: nginx
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  configMap:
+    name: nginx-config
+  service:
+    type: LoadBalancer
+    port: 80
