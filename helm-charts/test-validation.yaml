@@ -1,0 +1,26 @@
+# Test file with missing required values
+nameOverride: ""
+fullnameOverride: ""
+
+# Namespace configuration
+namespace:
+  create: true
+  name: "student-api-test"
+
+# Student API configuration with missing image tag
+studentApi:
+  image:
+    repository: ketan-karki/student-api
+    # tag is intentionally missing to test validation
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  service:
+    type: ClusterIP
+    port: 8080

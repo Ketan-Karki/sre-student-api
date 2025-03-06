@@ -1,27 +1,17 @@
-# Global settings
+# Test file with missing required values
 nameOverride: ""
 fullnameOverride: ""
-
-# Image credentials for private registry access
-imageCredentials:
-  registry: ""
-  username: ""
-  password: ""
-  email: ""
-  # Set to true to create a Secret for pulling images from private registries
-  createSecret: false
-  secretName: "registry-credentials"
 
 # Namespace configuration
 namespace:
   create: true
-  name: "student-api"
+  name: "student-api-test"
 
-# Student API configuration
+# Student API configuration with missing image tag
 studentApi:
   image:
     repository: ketan-karki/student-api
-    tag: 1.0.0
+    # tag is intentionally missing to test validation
     pullPolicy: IfNotPresent
   replicas: 1
   resources:

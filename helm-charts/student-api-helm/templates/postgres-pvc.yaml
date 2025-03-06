@@ -4,6 +4,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: postgres-pvc
   namespace: {{ .Values.namespace.name }}
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   accessModes:
     - ReadWriteOnce
