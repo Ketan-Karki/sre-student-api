@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: student-api-appset
+  namespace: argocd
+spec:
+  generators:
+  - git:
+      repoURL: https://github.com/Ketan-Karki/student-api
+      revision: HEAD
+      directories:
+      - path: helm-charts/student-api-helm/environments/*
+  template:
+    metadata:
+      name: 'student-api-{{path.basename}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/Ketan-Karki/student-api
+        targetRevision: HEAD
+        path: helm-charts/student-api-helm
+        helm:
+          valueFiles:
+          - environments/{{path.basename}}/values.yaml
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{path.basename}}-student-api'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true

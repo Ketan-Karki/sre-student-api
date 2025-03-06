@@ -1,0 +1,47 @@
+# Production environment values
+namespace:
+  create: true
+  name: "prod-student-api"
+
+studentApi:
+  image:
+    repository: ketan-karki/student-api
+    tag: stable
+    pullPolicy: IfNotPresent
+  replicas: 2
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  service:
+    type: ClusterIP
+    port: 8080
+
+postgres:
+  image:
+    repository: postgres
+    tag: 15.3
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  database:
+    name: api
+    user: postgres
+    password: postgres  # In production, use a secret manager or Kubernetes secrets
+
+nginx:
+  enabled: true
+  image:
+    repository: nginx
+    tag: stable
+    pullPolicy: IfNotPresent
+  replicas: 2

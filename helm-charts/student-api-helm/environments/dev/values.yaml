@@ -1,0 +1,47 @@
+# Development environment values
+namespace:
+  create: true
+  name: "dev-student-api"
+
+studentApi:
+  image:
+    repository: ketan-karki/student-api
+    tag: latest
+    pullPolicy: Always
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  service:
+    type: ClusterIP
+    port: 8080
+
+postgres:
+  image:
+    repository: postgres
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  database:
+    name: api
+    user: postgres
+    password: postgres
+
+nginx:
+  enabled: true
+  image:
+    repository: nginx
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1

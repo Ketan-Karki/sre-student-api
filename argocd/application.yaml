@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: student-api
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Ketan-Karki/student-api
+    targetRevision: HEAD
+    path: helm-charts/student-api-helm
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: student-api
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
