@@ -6,7 +6,7 @@ namespace:
 studentApi:
   image:
     repository: ketan-karki/student-api
-    tag: latest
+    tag: 15cde29
     pullPolicy: Always
   replicas: 1
   resources:
@@ -23,7 +23,7 @@ studentApi:
 postgres:
   image:
     repository: postgres
-    tag: latest
+    tag: 15cde29
     pullPolicy: IfNotPresent
   replicas: 1
   resources:
@@ -42,6 +42,6 @@ nginx:
   enabled: true
   image:
     repository: nginx
-    tag: latest
+    tag: 15cde29
     pullPolicy: IfNotPresent
   replicas: 1
