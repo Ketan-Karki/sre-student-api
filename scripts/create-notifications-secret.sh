@@ -35,60 +35,6 @@ kubectl apply -f $TMP_FILE
 rm $TMP_FILE $TMP_FILE.bak
 
 echo "ConfigMap updated."
-
-# Check if dependent_services node exists
-if kubectl get nodes dependent_services &>/dev/null; then
-  echo "The node 'dependent_services' exists. Applying required node affinity."
-  # Create a temporary file for the deployment patch
-  NODE_AFFINITY_PATCH=$(mktemp)
-
-  # Create a patch to add nodeAffinity to the deployment
-  cat > $NODE_AFFINITY_PATCH << EOF
-spec:
-  template:
-    spec:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values:
-                - dependent_services
-EOF
-else
-  echo "Warning: Node 'dependent_services' not found. Applying preferred node affinity instead."
-  # List available nodes for reference
-  echo "Available nodes:"
-  kubectl get nodes -o custom-columns=NAME:.metadata.name,STATUS:.status.conditions[-1].type,READY:.status.conditions[-1].status
-  
-  # Create a temporary file for the deployment patch with preferred affinity
-  NODE_AFFINITY_PATCH=$(mktemp)
-
-  # Create a patch with preferred affinity to allow scheduling anywhere but prefer worker nodes if available
-  cat > $NODE_AFFINITY_PATCH << EOF
-spec:
-  template:
-    spec:
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
-              - key: node-role.kubernetes.io/worker
-                operator: Exists
-EOF
-fi
-
-# Apply the node affinity patch to the deployment
-echo "Adding node affinity to ArgoCD notifications controller..."
-kubectl -n argocd patch deployment argocd-notifications-controller --patch "$(cat $NODE_AFFINITY_PATCH)"
-
-# Clean up the patch file
-rm $NODE_AFFINITY_PATCH
-
 echo "Restarting ArgoCD notifications controller..."
 kubectl -n argocd rollout restart deployment argocd-notifications-controller
 kubectl -n argocd rollout status deployment argocd-notifications-controller
