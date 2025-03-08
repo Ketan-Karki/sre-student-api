@@ -7,7 +7,7 @@ VERSION=1.0.0
 NETWORK_NAME=student-api-network
 
 # Targets
-.PHONY: all build run clean test up down logs ps test-api test-api-k8s get-service-url k8s-deploy k8s-test test-helm test-argocd test-all fix-permissions clean-helm-namespace test-helm-clean test-argocd-notifications test-helm-debug build-local-image test-helm-local test-notifications test-email setup-email-password
+.PHONY: all build run clean test up down logs ps test-api test-api-k8s get-service-url k8s-deploy k8s-test test-helm test-argocd test-all fix-permissions clean-helm-namespace test-helm-clean test-argocd-notifications test-helm-debug build-local-image test-helm-local test-notifications test-email setup-email-password verify-all argocd-ui
 
 # Default target that builds the application
 all: build
@@ -141,8 +141,19 @@ test-argocd:
 	@echo "Testing ArgoCD configuration..."
 	@cd argocd && ./configure-argocd.sh
 	@echo "Setup port forwarding to access ArgoCD UI:"
-	@echo "kubectl port-forward svc/argocd-server -n argocd 8080:443"
-	@echo "Then navigate to https://localhost:8080 in your browser"
+	@echo "kubectl port-forward svc/argocd-server -n argocd 9090:443"
+	@echo "Then navigate to https://localhost:9090 in your browser"
+
+# Access ArgoCD UI with credentials
+argocd-ui: fix-permissions
+	@echo "Setting up port forwarding to access ArgoCD UI..."
+	@echo "ArgoCD admin username: admin"
+	@echo -n "ArgoCD admin password: "
+	@kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d || echo "Password not found. ArgoCD might be using a custom password."
+	@echo "\nStarting port forwarding to ArgoCD UI..."
+	@echo "Access the UI at: https://localhost:9090"
+	@echo "Press Ctrl+C to stop port forwarding when done."
+	@kubectl port-forward svc/argocd-server -n argocd 9090:443
 
 # Test ArgoCD notifications
 test-argocd-notifications: fix-permissions
@@ -211,3 +222,49 @@ clean:
 	kubectl delete -f k8s/config/db-secrets.yaml 2>/dev/null || true
 	kubectl delete -f k8s/postgres/deployment.yaml 2>/dev/null || true
 	kubectl delete -f k8s/postgres/service.yaml 2>/dev/null || true
+
+# Verify all functionality to ensure nothing is broken
+verify-all: fix-permissions
+	@echo "====================================="
+	@echo "RUNNING COMPREHENSIVE VERIFICATION SUITE"
+	@echo "====================================="
+	
+	@echo "\n[1/7] Testing Docker Compose deployment..."
+	@make up
+	@make test-api || { echo "❌ Docker Compose deployment test failed"; exit 1; }
+	@echo "✅ Docker Compose deployment test passed"
+	
+	@echo "\n[2/7] Testing Kubernetes deployment..."
+	@make k8s-deploy || { echo "❌ Kubernetes deployment failed"; exit 1; }
+	@echo "✅ Kubernetes configuration applied successfully"
+	@make test-api-k8s || { echo "❌ Kubernetes API test failed"; exit 1; }
+	@echo "✅ Kubernetes API test passed"
+	
+	@echo "\n[3/7] Testing Helm chart deployment..."
+	@make test-helm || { echo "❌ Helm chart test failed"; exit 1; }
+	@echo "✅ Helm chart test passed"
+	
+	@echo "\n[4/7] Testing local image build and deployment..."
+	@make test-helm-local || { echo "❌ Helm chart with local image test failed"; exit 1; }
+	@echo "✅ Helm chart with local image test passed"
+	
+	@echo "\n[5/7] Testing ArgoCD setup..."
+	@make test-argocd || { echo "❌ ArgoCD configuration test failed"; exit 1; }
+	@echo "✅ ArgoCD configuration test passed"
+	
+	@echo "\n[6/7] Testing notification systems..."
+	@make test-notifications || { echo "⚠️ Notification tests failed but continuing"; }
+	@echo "✅ Notification tests completed"
+	
+	@echo "\n[7/7] Testing email functionality..."
+	@make test-email || { echo "⚠️ Email test failed but continuing"; }
+	@echo "✅ Email test completed"
+	
+	@echo "\n====================================="
+	@echo "🎉 ALL VERIFICATION TESTS COMPLETED"
+	@echo "====================================="
+	@echo "Port forwarding instructions for ArgoCD UI:"
+	@echo "kubectl port-forward svc/argocd-server -n argocd 9090:443"
+	@echo "Then navigate to https://localhost:9090 in your browser"
+	@echo "\nCleanup recommended after verification:"
+	@echo "make clean"
