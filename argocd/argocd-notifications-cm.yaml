@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+data:
+  # General notification service settings
+
+  # Email notification configuration - using App Passwords
+  service.email: |
+    host: smtp.gmail.com
+    port: 587
+    username: ketankarki2626@gmail.com
+    # Use $email-password to reference the value from argocd-notifications-secret
+    password: $email-password
+    from: ketankarki2626@gmail.com
+    tls:
+      insecure_skip_verify: false
+      required: true
+    auth_required: true
+
+  # Discord notification configuration - using correct format for ArgoCD v2.14+
+  service.discord.webhook: |
+    url: https://discord.com/api/webhooks/1347263141410635827/LJXyvLmdvU-SRjYX1kpY7JxYOQcyKcpuF5iK05nJQEmPv9qZrmQMdfILAu-vmVYPJqWz
+
+  # Trigger definitions
+  trigger.on-sync-status-change: |
+    - when: app.status.sync.status == 'Synced'
+      send: [app-sync-succeeded]
+    - when: app.status.sync.status == 'OutOfSync'
+      send: [app-out-of-sync]
+
+  trigger.on-health-status-change: |
+    - when: app.status.health.status == 'Degraded'
+      send: [app-health-degraded]
+    - when: app.status.health.status == 'Healthy'
+      send: [app-health-recovered]
+
+  # Default subscription for all applications
+  subscriptions: |
+    - recipients:
+      - email:ketankarki2626@gmail.com
+      - discord:webhook
+      triggers:
+      - on-sync-status-change
+      - on-health-status-change
+
+  # Template definitions for different notification services
+  template.app-sync-succeeded: |
+    email:
+      subject: Application {{.app.metadata.name}} has been successfully synced
+      body: |
+        Application {{.app.metadata.name}} has been successfully synced at {{.app.status.operationState.finishedAt}}.
+        Revision: {{.app.status.sync.revision}}
+    discord.webhook:
+      embeds:
+      - title: ✅ Application {{.app.metadata.name}} has been successfully synced
+        color: 5025616
+        description: "Application {{.app.metadata.name}} has been successfully synced.\n\nRevision: {{.app.status.sync.revision}}"
+        footer:
+          text: "ArgoCD Notification"
+
+  template.app-out-of-sync: |
+    email:
+      subject: Application {{.app.metadata.name}} is out of sync
+      body: |
+        Application {{.app.metadata.name}} is out of sync.
+        Current revision: {{.app.status.sync.revision}}
+    discord.webhook:
+      embeds:
+      - title: ⚠️ Application {{.app.metadata.name}} is out of sync
+        color: 16761095
+        description: "Application {{.app.metadata.name}} is out of sync.\n\nCurrent revision: {{.app.status.sync.revision}}"
+        footer:
+          text: "ArgoCD Notification"
+
+  template.app-health-degraded: |
+    email:
+      subject: Application {{.app.metadata.name}} is degraded
+      body: |
+        Application {{.app.metadata.name}} is degraded.
+        Reason: {{range .app.status.resources}}{{if eq .health.status "Degraded"}}{{.name}}: {{.health.message}}{{end}}{{end}}
+    discord.webhook:
+      embeds:
+      - title: 🔴 Application {{.app.metadata.name}} is degraded
+        color: 15158332
+        description: "Application {{.app.metadata.name}} is degraded.\n\nReason: {{range .app.status.resources}}{{if eq .health.status \"Degraded\"}}{{.name}}: {{.health.message}}{{end}}{{end}}"
+        footer:
+          text: "ArgoCD Notification"
+
+  template.app-health-recovered: |
+    email:
+      subject: Application {{.app.metadata.name}} has recovered
+      body: |
+        Application {{.app.metadata.name}} has recovered.
+        Current health status: {{.app.status.health.status}}
+    discord.webhook:
+      embeds:
+      - title: 🔵 Application {{.app.metadata.name}} has recovered
+        color: 3447003
+        description: "Application {{.app.metadata.name}} has recovered.\n\nCurrent health status: {{.app.status.health.status}}"
+        footer:
+          text: "ArgoCD Notification"

@@ -7,7 +7,7 @@ VERSION=1.0.0
 NETWORK_NAME=student-api-network
 
 # Targets
-.PHONY: all build run clean test up down logs ps test-api test-api-k8s get-service-url k8s-deploy k8s-test
+.PHONY: all build run clean test up down logs ps test-api test-api-k8s get-service-url k8s-deploy k8s-test test-helm test-argocd test-all fix-permissions clean-helm-namespace test-helm-clean test-argocd-notifications test-helm-debug build-local-image test-helm-local test-notifications test-email setup-email-password
 
 # Default target that builds the application
 all: build
@@ -92,6 +92,114 @@ k8s-test: build k8s-deploy
 	@kubectl wait --for=condition=available deployment/student-api -n student-api --timeout=60s
 	@sleep 10
 	@make test-api
+
+# Clean Helm namespace
+clean-helm-namespace:
+	@echo "Cleaning Helm namespace..."
+	@./scripts/clean-helm-namespace.sh dev-student-api
+
+# Test Helm chart with latest values (using clean namespace approach)
+test-helm: fix-permissions clean-helm-namespace
+	@echo "Testing Helm chart deployment..."
+	@helm upgrade --install student-api ./helm-charts/student-api-helm \
+		--namespace dev-student-api \
+		--values ./helm-charts/student-api-helm/environments/dev/values.yaml
+	@echo "Waiting for deployment to be ready..."
+	@kubectl wait --for=condition=available deployment/student-api -n dev-student-api --timeout=120s
+	@echo "Setting up port forwarding..."
+	@kubectl port-forward svc/student-api -n dev-student-api 8080:8080 & \
+	echo $$! > .port-forward-pid
+	@sleep 5
+	@echo "Running Helm chart tests..."
+	@NAMESPACE=dev-student-api ./helm-charts/student-api-helm/test.sh
+	@kill $$(cat .port-forward-pid) || true
+	@rm -f .port-forward-pid
+
+# Test Helm chart with clean namespace and extended debugging
+test-helm-debug: fix-permissions
+	@echo "Testing Helm chart deployment with debugging using public image..."
+	@./scripts/local-image-build.sh
+	@./scripts/clean-helm-namespace.sh dev-student-api
+	@helm upgrade --install student-api ./helm-charts/student-api-helm \
+		--namespace dev-student-api \
+		--values ./helm-charts/student-api-helm/environments/dev/values.yaml \
+		--debug
+	@echo "Waiting for deployment to be ready (with extended timeout)..."
+	@kubectl wait --for=condition=available deployment/student-api -n dev-student-api --timeout=180s || \
+		(./scripts/debug-helm-deployment.sh dev-student-api; exit 1)
+	@echo "Setting up port forwarding..."
+	@kubectl port-forward svc/student-api -n dev-student-api 8080:8080 & \
+	echo $$! > .port-forward-pid
+	@sleep 5
+	@echo "Running Helm chart tests..."
+	@NAMESPACE=dev-student-api ./helm-charts/student-api-helm/test.sh
+	@kill $$(cat .port-forward-pid) || true
+	@rm -f .port-forward-pid
+
+# Test ArgoCD configuration
+test-argocd:
+	@echo "Testing ArgoCD configuration..."
+	@cd argocd && ./configure-argocd.sh
+	@echo "Setup port forwarding to access ArgoCD UI:"
+	@echo "kubectl port-forward svc/argocd-server -n argocd 8080:443"
+	@echo "Then navigate to https://localhost:8080 in your browser"
+
+# Test ArgoCD notifications
+test-argocd-notifications: fix-permissions
+	@echo "Testing ArgoCD notifications..."
+	@./scripts/test-argocd-notifications.sh
+
+# Test all notification channels by forcing notifications
+test-notifications: fix-permissions
+	@echo "Testing all notification channels by forcing notifications..."
+	@./scripts/force-notifications.sh
+
+# Test direct email functionality
+test-email: fix-permissions
+	@echo "Testing direct email functionality..."
+	@./scripts/test-email-notifications.sh
+
+# Set up secure email password for notifications
+setup-email-password: fix-permissions
+	@echo "Setting up secure email password for notifications..."
+	@read -p "Enter your Gmail App Password: " PASSWORD && ./scripts/create-notifications-secret.sh $$PASSWORD
+
+# Run all tests for ArgoCD and Helm with enhanced debugging
+test-all: fix-permissions
+	@echo "Running all tests..."
+	@make test-argocd
+	@echo "========================="
+	@echo "ArgoCD tests completed. Running Helm tests..."
+	@echo "========================="
+	@make test-helm-local
+	@echo "========================="
+	@echo "Verification: Checking deployment health"
+	@./scripts/debug-helm-deployment.sh dev-student-api
+	@echo "========================="
+	@echo "All tests completed successfully!"
+
+# Fix permissions for scripts
+fix-permissions:
+	@echo "Fixing script permissions..."
+	@chmod +x ./scripts/*.sh
+	@chmod +x ./helm-charts/student-api-helm/*.sh
+	@chmod +x ./argocd/*.sh || true
+
+# Build and load local image for testing
+build-local-image: fix-permissions
+	@echo "Building and loading local image for testing..."
+	@./scripts/local-image-build.sh
+
+# Test Helm chart with local image
+test-helm-local: fix-permissions build-local-image clean-helm-namespace
+	@echo "Testing Helm chart deployment with local image..."
+	@helm upgrade --install student-api ./helm-charts/student-api-helm \
+		--namespace dev-student-api \
+		--values ./helm-charts/student-api-helm/environments/dev/values.yaml
+	@echo "Waiting for deployment to be ready..."
+	@kubectl wait --for=condition=available deployment/student-api -n dev-student-api --timeout=120s
+	@echo "Running Helm chart tests directly..."
+	@TEST_PORT=8888 NAMESPACE=dev-student-api ./helm-charts/student-api-helm/test.sh
 
 # Cleans up the application and Docker resources
 clean:

@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # Add custom styles and branding
+  ui.cssurl: ""
+  
+  # Set the help chat URL
+  help.chatUrl: ""
+  help.chatText: ""
+  
+  # Repository URL configuration
+  repositories: |
+    - url: https://github.com/Ketan-Karki/student-api
+      name: student-api
+      type: git
+  
+  # Resource exclusions for better performance
+  resource.exclusions: |
+    - apiGroups:
+      - events.k8s.io
+      kinds:
+      - Event
+      clusters:
+      - "*"
+    - apiGroups:
+      - ""
+      kinds:
+      - Endpoints
+      clusters:
+      - "*"
+  
+  # Configure timeout settings
+  timeout.reconciliation: 180s
+  
+  # Configure application defaults
+  application.instanceLabelKey: argocd.argoproj.io/instance
+  
+  # Enable status badge
+  statusbadge.enabled: "true"

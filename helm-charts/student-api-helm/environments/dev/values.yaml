@@ -1,13 +1,13 @@
-# Development environment values
+# Values for student-api chart in development environment
 namespace:
   create: true
-  name: "dev-student-api"
+  name: dev-student-api
 
 studentApi:
   image:
-    repository: ketan-karki/student-api
-    tag: 15cde29
-    pullPolicy: Always
+    repository: student-api
+    tag: latest
+    pullPolicy: Never # Use Never for local images
   replicas: 1
   resources:
     requests:
@@ -19,11 +19,26 @@ studentApi:
   service:
     type: ClusterIP
     port: 8080
+  # Add health checks for better pod lifecycle management
+  livenessProbe:
+    httpGet:
+      path: /api/v1/healthcheck
+      port: 8080
+    initialDelaySeconds: 30
+    timeoutSeconds: 5
+    periodSeconds: 15
+  readinessProbe:
+    httpGet:
+      path: /api/v1/healthcheck
+      port: 8080
+    initialDelaySeconds: 5
+    timeoutSeconds: 3
+    periodSeconds: 10
 
 postgres:
   image:
     repository: postgres
-    tag: 15cde29
+    tag: latest
     pullPolicy: IfNotPresent
   replicas: 1
   resources:
@@ -37,11 +52,14 @@ postgres:
     name: api
     user: postgres
     password: postgres
+  persistence:
+    enabled: true
+    size: 1Gi
 
 nginx:
   enabled: true
   image:
     repository: nginx
-    tag: 15cde29
+    tag: latest
     pullPolicy: IfNotPresent
   replicas: 1
