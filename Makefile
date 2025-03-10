@@ -141,11 +141,16 @@ setup-node-labels: fix-permissions
 	@echo "Setting up node labels for deployment..."
 	@./scripts/setup-node-labels.sh
 
+# Apply ArgoCD manifests declaratively
+argocd-apply-manifests: fix-permissions
+	@echo "Applying ArgoCD manifests declaratively..."
+	@kubectl apply -k ./argocd/
+
 # Test ArgoCD configuration
 test-argocd: fix-permissions setup-node-labels
 	@echo "Testing ArgoCD configuration..."
-	@echo "Ensuring ArgoCD deploys to argocd namespace on nodes with role=dependent_services..."
-	@cd argocd && NODE_SELECTOR="dependent_services" NODE_SELECTOR_KEY="role" NAMESPACE="argocd" ROLLOUT_TIMEOUT="240s" ./configure-argocd.sh
+	@echo "Setting up ArgoCD declaratively..."
+	@./scripts/setup-argocd-declarative.sh
 	@echo "Setup port forwarding to access ArgoCD UI:"
 	@echo "kubectl port-forward svc/argocd-server -n argocd 9090:443"
 	@echo "Then navigate to https://localhost:9090 in your browser"
@@ -173,22 +178,22 @@ argocd-verify-deployment: fix-permissions
 
 # Force ArgoCD deployment with options to skip node selector
 argocd-force-deploy: fix-permissions setup-node-labels
-	@echo "Force deploying ArgoCD with optional node selector override..."
+	@echo "Force deploying ArgoCD declaratively..."
 	@read -p "Use node selector for ArgoCD (y/n)? " USE_NODE_SELECTOR; \
 	if [ "$$USE_NODE_SELECTOR" = "y" ]; then \
 		read -p "Enter node selector (default: dependent_services): " NODE_SELECT; \
 		NODE_SELECT=$${NODE_SELECT:-dependent_services}; \
 		echo "Using node selector: $$NODE_SELECT"; \
-		cd argocd && NODE_SELECTOR="$$NODE_SELECT" NODE_SELECTOR_KEY="role" NAMESPACE="argocd" ROLLOUT_TIMEOUT="300s" ./configure-argocd.sh; \
+		NODE_SELECTOR="$$NODE_SELECT" NODE_SELECTOR_KEY="role" ./scripts/setup-argocd-declarative.sh; \
 	else \
 		echo "Deploying without node selector constraints..."; \
-		cd argocd && SKIP_NODE_SELECTOR=true NAMESPACE="argocd" ROLLOUT_TIMEOUT="300s" ./configure-argocd.sh; \
+		SKIP_NODE_SELECTOR=true ./scripts/setup-argocd-declarative.sh; \
 	fi
 
 # Quick deployment of ArgoCD skipping statefulset wait
 argocd-quick-deploy: fix-permissions setup-node-labels
 	@echo "Quick deploying ArgoCD (skipping statefulset wait)..."
-	@cd argocd && NODE_SELECTOR="dependent_services" NODE_SELECTOR_KEY="role" NAMESPACE="argocd" SKIP_WAIT_STATEFULSET=true ROLLOUT_TIMEOUT="60s" ./configure-argocd.sh
+	@SKIP_WAIT_STATEFULSET=true ROLLOUT_TIMEOUT="60s" ./scripts/setup-argocd-declarative.sh
 	@echo "\nVerifying critical ArgoCD components are running..."
 	@kubectl get pods -n argocd | grep -E 'server|repo-server'
 	@echo "\nNote: The application-controller may remain in Pending state in resource-constrained environments"
@@ -205,7 +210,11 @@ debug-argocd: fix-permissions
 # Fix ArgoCD application controller resource constraints
 fix-argocd-controller: fix-permissions
 	@echo "Optimizing ArgoCD application controller resources..."
-	@./scripts/fix-statefulset-resources.sh
+	@FIX_RESOURCES=true ./scripts/setup-argocd-declarative.sh
+	@echo "Restarting problematic pods if any..."
+	@kubectl rollout restart statefulset argocd-application-controller -n argocd
+	@kubectl rollout restart deployment argocd-notifications-controller -n argocd
+	@kubectl rollout restart deployment argocd-applicationset-controller -n argocd
 
 # Test ArgoCD notifications
 test-argocd-notifications: fix-permissions

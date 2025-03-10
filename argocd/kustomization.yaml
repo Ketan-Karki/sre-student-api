@@ -3,5 +3,10 @@ kind: Kustomization
 
 resources:
   - application.yaml
+  - applicationset.yaml
+  - argocd-cm.yaml
+  - argocd-notifications-cm.yaml
+  - argocd-rbac-cm.yaml
+  - repository-secret.yaml
 
 namespace: argocd
