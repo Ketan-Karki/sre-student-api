@@ -311,12 +311,78 @@ For detailed information on testing the ArgoCD and Helm components, see [ArgoCD 
 
 ## ArgoCD Configuration
 
+### Setting Up ArgoCD Server
+
+1. **Install ArgoCD in your Kubernetes cluster:**
+
+   ```bash
+   # Create a dedicated namespace for ArgoCD
+   kubectl create namespace argocd
+
+   # Install ArgoCD components
+   kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+   # Wait for all pods to be ready
+   kubectl wait --for=condition=Ready pods --all -n argocd --timeout=300s
+   ```
+
+2. **Access the ArgoCD UI:**
+
+   ```bash
+   # Port forward the ArgoCD server to your local machine
+   kubectl port-forward svc/argocd-server -n argocd 8080:443
+   ```
+
+   Then access the UI at: https://localhost:8080
+
+3. **Get the initial admin password:**
+
+   ```bash
+   # For ArgoCD v1.9 and later
+   kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+   ```
+
+   Use username: `admin` and the retrieved password to log in.
+
+4. **Configure GitHub Repository Access:**
+
+   ```bash
+   # Create a secret with your GitHub credentials
+   kubectl create secret generic github-repo-creds \
+     --namespace argocd \
+     --from-literal=username=YOUR_GITHUB_USERNAME \
+     --from-literal=password=YOUR_GITHUB_TOKEN
+
+   # Install ArgoCD CLI (optional, for command line management)
+   # MacOS
+   brew install argocd
+   # Linux
+   curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+   sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+   rm argocd-linux-amd64
+
+   # Add the repository to ArgoCD
+   argocd login localhost:8080 --username admin --password <your-password> --insecure
+   argocd repo add https://github.com/YOUR_USERNAME/sre-bootcamp-rest-api.git \
+     --username YOUR_GITHUB_USERNAME \
+     --password YOUR_GITHUB_TOKEN
+   ```
+
+5. **Deploy the Application:**
+
+   ```bash
+   # Apply the ArgoCD Application manifest
+   kubectl apply -f argocd/application.yaml
+   ```
+
 ArgoCD is configured with:
 
 - RBAC for access control
 - Notification system (email and Discord)
 - Application of Applications pattern
 - Automated sync policies
+
+For more detailed ArgoCD configuration and troubleshooting, see [ArgoCD README](./argocd/README.md).
 
 ## Directory Structure
 
