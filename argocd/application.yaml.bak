@@ -3,27 +3,18 @@ kind: Application
 metadata:
   name: student-api
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   project: default
   source:
     repoURL: https://github.com/Ketan-Karki/student-api
-    targetRevision: main
+    targetRevision: HEAD
     path: helm-charts/student-api-helm
     helm:
       valueFiles:
         - environments/prod/values.yaml
       parameters:
-        # Fix namespace to match destination
-        - name: namespace.name
-          value: student-api
-        # Fix image tags for containers
-        - name: studentApi.image.tag
-          value: latest
-        - name: postgres.image.tag
-          value: 15.3-alpine
-        - name: nginx.image.tag
-          value: stable-alpine
-        # Configure nginx
         - name: nginx.configMap.name
           value: nginx-config
   destination:
@@ -33,6 +24,15 @@ spec:
     automated:
       prune: true
       selfHeal: true
+      allowEmpty: false
     syncOptions:
       - CreateNamespace=true
-      - ServerSideApply=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

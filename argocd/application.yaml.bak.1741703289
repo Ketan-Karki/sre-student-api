@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: student-api
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   project: default
   source:
@@ -13,17 +15,6 @@ spec:
       valueFiles:
         - environments/prod/values.yaml
       parameters:
-        # Fix namespace to match destination
-        - name: namespace.name
-          value: student-api
-        # Fix image tags for containers
-        - name: studentApi.image.tag
-          value: latest
-        - name: postgres.image.tag
-          value: 15.3-alpine
-        - name: nginx.image.tag
-          value: stable-alpine
-        # Configure nginx
         - name: nginx.configMap.name
           value: nginx-config
   destination:
@@ -35,4 +26,13 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-      - ServerSideApply=true
+      - PrunePropagationPolicy=foreground
+      - RespectIgnoreDifferences=true
+  # Add ignoreDifferences to handle immutable fields
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: student-api
+      jsonPointers:
+        - /spec/selector
+        - /spec/template/metadata/labels
