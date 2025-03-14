@@ -21,7 +21,7 @@ data:
 
   # Discord notification configuration - using correct format for ArgoCD v2.14+
   service.discord.webhook: |
-    url: https://discord.com/api/webhooks/1347263141410635827/LJXyvLmdvU-SRjYX1kpY7JxYOQcyKcpuF5iK05nJQEmPv9qZrmQMdfILAu-vmVYPJqWz
+    url: https://discord.com/api/webhooks/1350041639560810518/4bsC9mOaTHv-h0grVpKLjkv3Nja_LPqtWoXiQnFm2B0CN4pyDdER7I1PlecJ9MVzdj2e
 
   # Trigger definitions
   trigger.on-sync-status-change: |
