@@ -233,8 +233,13 @@ test-email: fix-permissions
 
 # Set up secure email password for notifications
 setup-email-password: fix-permissions
-	@echo "Setting up secure email password for notifications..."
-	@read -p "Enter your Gmail App Password: " PASSWORD && ./scripts/create-notifications-secret.sh $$PASSWORD
+	@echo "Setting up email password for ArgoCD notifications..."
+	@read -sp "Enter Gmail app password: " password; \
+	kubectl create secret generic argocd-notifications-secret \
+		--namespace argocd \
+		--from-literal=email-password=$$password \
+		--dry-run=client -o yaml | kubectl apply -f -
+	@echo "\nEmail password secret created successfully"
 
 # Verify email configuration
 verify-email-config: fix-permissions

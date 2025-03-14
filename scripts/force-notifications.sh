@@ -1,97 +1,83 @@
 #!/bin/bash
-# Script to force ArgoCD notifications by manipulating application sync state
+set -e
 
-APP_NAME=${1:-student-api}
+# This script forces notifications for ArgoCD applications
+# to test the notification system
+
+APP_NAME="${1:-student-api}"
+NAMESPACE="${2:-argocd}"
 
 echo "===== Forcing Notifications for Application: $APP_NAME ====="
 
-# Reset notification status
+# 1. Reset notification status
 echo "1. Resetting notification status..."
-kubectl annotate application $APP_NAME -n argocd \
-  notifications.argoproj.io/notified.on-sync-status-change.discord=false \
-  notifications.argoproj.io/notified.on-sync-status-change.email=false \
-  notifications.argoproj.io/notified.on-health-status-change.discord=false \
-  notifications.argoproj.io/notified.on-health-status-change.email=false \
-  --overwrite
+kubectl annotate application $APP_NAME -n $NAMESPACE \
+  notified.notifications.argoproj.io- \
+  notifications.argoproj.io/notified.on-health-status-change.email- \
+  notifications.argoproj.io/notified.on-sync-status-change.email- \
+  notifications.argoproj.io/notified.on-health-status-change.webhook- \
+  notifications.argoproj.io/notified.on-sync-status-change.webhook- \
+  --overwrite 2>/dev/null || true
 
-# Ensure application has notification subscriptions
+# 2. Set subscription - ONLY webhook and email (no discord)
 echo "2. Confirming notification subscriptions are set..."
-kubectl annotate application $APP_NAME -n argocd \
-  notifications.argoproj.io/subscribe.on-sync-status-change.discord=webhook \
-  notifications.argoproj.io/subscribe.on-sync-status-change.email=ketankarki2626@gmail.com \
-  notifications.argoproj.io/subscribe.on-health-status-change.discord=webhook \
-  notifications.argoproj.io/subscribe.on-health-status-change.email=ketankarki2626@gmail.com \
+kubectl annotate application $APP_NAME -n $NAMESPACE \
+  notifications.argoproj.io/subscribe.on-health-status-change.email="ketankarki2626@gmail.com" \
+  notifications.argoproj.io/subscribe.on-sync-status-change.email="ketankarki2626@gmail.com" \
+  notifications.argoproj.io/subscribe.on-health-status-change.webhook="webhook" \
+  notifications.argoproj.io/subscribe.on-sync-status-change.webhook="webhook" \
   --overwrite
 
-# Force app out of sync by temporarily changing an annotation
+# 3. Force application to go out of sync with a temporary annotation
 echo "3. Forcing application out of sync with a temporary annotation..."
 TIMESTAMP=$(date +%s)
-kubectl patch application $APP_NAME -n argocd --type=merge \
-  -p "{\"metadata\":{\"annotations\":{\"temporary-change\":\"$TIMESTAMP\"}}}"
+kubectl patch application $APP_NAME -n $NAMESPACE --type=merge -p "{\"metadata\":{\"annotations\":{\"temporary-change\":\"$TIMESTAMP\"}}}"
 
+# 4. Wait for out-of-sync notification
 echo "4. Waiting for out-of-sync notification to trigger (10s)..."
 sleep 10
 
-# Verify notification controller status
+# 5. Check notification controller pod
 echo "5. Checking notification controller pod status..."
-kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-notifications-controller
+kubectl get pods -n argocd -l app.kubernetes.io/component=notifications-controller
 
-# Restart notification controller to pick up changes
+# 5b. Restart notification controller to ensure it picks up configuration changes
 echo "5b. Restarting notification controller to pick up changes..."
-kubectl rollout restart deployment/argocd-notifications-controller -n argocd
-kubectl rollout status deployment/argocd-notifications-controller -n argocd
+kubectl rollout restart deployment argocd-notifications-controller -n $NAMESPACE
+kubectl rollout status deployment argocd-notifications-controller -n $NAMESPACE
 
-# Trigger sync with the application
+# 6. Trigger sync
 echo "6. Triggering application sync..."
-# Try argocd CLI if available, otherwise use kubectl
-if command -v argocd &>/dev/null; then
-  argocd app sync $APP_NAME --force
-else
-  kubectl patch application $APP_NAME -n argocd --type=merge \
-    -p '{"operation":{"sync":{"revision":"HEAD","syncStrategy":{"hook":{}},"prune":true}}}'
-fi
+kubectl patch application $APP_NAME -n $NAMESPACE --type=merge -p "{\"metadata\":{\"annotations\":{\"force-sync-timestamp\":\"$TIMESTAMP\"}}}"
 
+# 7. Wait for sync notification
 echo "7. Waiting for sync notification to trigger (20s)..."
 sleep 20
 
-# Check notification logs
+# 8. Check notification controller logs
 echo "8. Checking notification controller logs for notification events:"
-kubectl logs deployment/argocd-notifications-controller -n argocd --tail=30 | grep -E 'notification|trigger|discord|error|webhook' || echo "No relevant log entries found"
+kubectl logs deployment/argocd-notifications-controller -n $NAMESPACE --tail=30 | grep -E 'notification|trigger|webhook|error|send' || echo "No relevant log entries found"
 
+# 9. Detailed notification debugging
 echo "===== Detailed Notification Debugging ====="
-
-# Check if the notification controller is running and responding
 echo "9. Verify notification service is properly configured:"
-kubectl get cm argocd-notifications-cm -n argocd -o yaml | grep -A5 "service\."
+kubectl get cm argocd-notifications-cm -n $NAMESPACE -o yaml | grep -A5 "service\."
 
-# Check that the application has the required annotations
 echo "10. Verify application has notification annotations:"
-kubectl get application $APP_NAME -n argocd -o yaml | grep -i notifications
+kubectl get application $APP_NAME -n $NAMESPACE -o jsonpath='{.metadata.annotations}' | grep -i "notif\|subscribe" | tr ',' '\n'
 
-# Check all triggered notifications
 echo "11. Check all triggered notifications:"
-kubectl get application $APP_NAME -n argocd -o yaml | grep -i notified
+kubectl get application $APP_NAME -n $NAMESPACE -o jsonpath='{.metadata.annotations}' | grep -i "notified\|notify" | tr ',' '\n'
 
-# Check ArgoCD version
 echo "12. Check ArgoCD version (different versions use different notification formats):"
-kubectl get deployment argocd-notifications-controller -n argocd -o jsonpath='{.spec.template.spec.containers[0].image}'
-echo ""
+kubectl get deployment argocd-server -n $NAMESPACE -o jsonpath='{.spec.template.spec.containers[0].image}'
 
-# Create test hook with curl to verify webhook directly
 echo "13. Testing Discord webhook directly with curl..."
-curl -X POST \
+DISCORD_URL=$(kubectl get cm argocd-notifications-cm -n $NAMESPACE -o jsonpath='{.data.service\.webhook}' | grep url | awk '{print $2}')
+curl -s -X POST \
   -H "Content-Type: application/json" \
-  -d '{
-    "content": "Test from ArgoCD notification troubleshooting script",
-    "embeds": [
-      {
-        "title": "Webhook Test",
-        "description": "Testing webhook from troubleshooting script",
-        "color": 5025616
-      }
-    ]
-  }' \
-  https://discord.com/api/webhooks/1347263141410635827/LJXyvLmdvU-SRjYX1kpY7JxYOQcyKcpuF5iK05nJQEmPv9qZrmQMdfILAu-vmVYPJqWz
+  -d '{"content": "Test message from shell", "embeds": [{"title": "Manual Test", "description": "Testing webhook directly from script", "color": 5025616}]}' \
+  $DISCORD_URL
 
 echo "===== Test Complete ====="
 echo "If notifications were sent, check your Discord channel and email now."

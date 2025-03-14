@@ -384,6 +384,22 @@ ArgoCD is configured with:
 
 For more detailed ArgoCD configuration and troubleshooting, see [ArgoCD README](./argocd/README.md).
 
+## Email Notifications Setup
+
+To set up email notifications securely:
+
+1. Create a directory for credentials: `mkdir -p ~/.argocd`
+2. Store your email password securely: `echo "your-password-here" > ~/.argocd/email-password`
+3. Set permissions: `chmod 600 ~/.argocd/email-password`
+4. Run the fix-notifications script: `./scripts/fix-notifications.sh`
+
+Alternatively, you can set the EMAIL_PASSWORD environment variable:
+
+```
+export EMAIL_PASSWORD="your-password-here"
+./scripts/fix-notifications.sh
+```
+
 ## Directory Structure
 
 - `/argocd`: ArgoCD configuration files

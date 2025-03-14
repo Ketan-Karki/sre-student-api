@@ -4,14 +4,11 @@ metadata:
   name: argocd-notifications-cm
   namespace: argocd
 data:
-  # General notification service settings
-
-  # Email notification configuration - using App Passwords
+  # Email notification configuration
   service.email: |
     host: smtp.gmail.com
     port: 587
     username: ketankarki2626@gmail.com
-    # Use $email-password to reference the value from argocd-notifications-secret
     password: $email-password
     from: ketankarki2626@gmail.com
     tls:
@@ -19,9 +16,12 @@ data:
       required: true
     auth_required: true
 
-  # Discord notification configuration - using correct format for ArgoCD v2.14+
-  service.discord.webhook: |
-    url: https://discord.com/api/webhooks/1350041639560810518/4bsC9mOaTHv-h0grVpKLjkv3Nja_LPqtWoXiQnFm2B0CN4pyDdER7I1PlecJ9MVzdj2e
+  # Use webhook with URL from a secret
+  service.webhook: |
+    url: $discord-webhook-url
+    headers:
+    - name: Content-Type
+      value: application/json
 
   # Trigger definitions
   trigger.on-sync-status-change: |
@@ -36,29 +36,22 @@ data:
     - when: app.status.health.status == 'Healthy'
       send: [app-health-recovered]
 
-  # Default subscription for all applications
+  # Default subscription using webhook only
   subscriptions: |
     - recipients:
       - email:ketankarki2626@gmail.com
-      - discord:webhook
+      - webhook:webhook
       triggers:
       - on-sync-status-change
       - on-health-status-change
 
-  # Template definitions for different notification services
+  # Template definitions for email
   template.app-sync-succeeded: |
     email:
       subject: Application {{.app.metadata.name}} has been successfully synced
       body: |
         Application {{.app.metadata.name}} has been successfully synced at {{.app.status.operationState.finishedAt}}.
         Revision: {{.app.status.sync.revision}}
-    discord.webhook:
-      embeds:
-      - title: ✅ Application {{.app.metadata.name}} has been successfully synced
-        color: 5025616
-        description: "Application {{.app.metadata.name}} has been successfully synced.\n\nRevision: {{.app.status.sync.revision}}"
-        footer:
-          text: "ArgoCD Notification"
 
   template.app-out-of-sync: |
     email:
@@ -66,13 +59,6 @@ data:
       body: |
         Application {{.app.metadata.name}} is out of sync.
         Current revision: {{.app.status.sync.revision}}
-    discord.webhook:
-      embeds:
-      - title: ⚠️ Application {{.app.metadata.name}} is out of sync
-        color: 16761095
-        description: "Application {{.app.metadata.name}} is out of sync.\n\nCurrent revision: {{.app.status.sync.revision}}"
-        footer:
-          text: "ArgoCD Notification"
 
   template.app-health-degraded: |
     email:
@@ -80,13 +66,6 @@ data:
       body: |
         Application {{.app.metadata.name}} is degraded.
         Reason: {{range .app.status.resources}}{{if eq .health.status "Degraded"}}{{.name}}: {{.health.message}}{{end}}{{end}}
-    discord.webhook:
-      embeds:
-      - title: 🔴 Application {{.app.metadata.name}} is degraded
-        color: 15158332
-        description: "Application {{.app.metadata.name}} is degraded.\n\nReason: {{range .app.status.resources}}{{if eq .health.status \"Degraded\"}}{{.name}}: {{.health.message}}{{end}}{{end}}"
-        footer:
-          text: "ArgoCD Notification"
 
   template.app-health-recovered: |
     email:
@@ -94,10 +73,68 @@ data:
       body: |
         Application {{.app.metadata.name}} has recovered.
         Current health status: {{.app.status.health.status}}
-    discord.webhook:
-      embeds:
-      - title: 🔵 Application {{.app.metadata.name}} has recovered
-        color: 3447003
-        description: "Application {{.app.metadata.name}} has recovered.\n\nCurrent health status: {{.app.status.health.status}}"
-        footer:
-          text: "ArgoCD Notification"
+
+  # Webhook templates (in separate keys to avoid JSON parsing issues)
+  template.app-sync-succeeded.webhook: |
+    method: POST
+    body: |
+      {
+        "embeds": [
+          {
+            "title": "✅ Application {{.app.metadata.name}} has been successfully synced",
+            "color": 5025616,
+            "description": "Application {{.app.metadata.name}} has been successfully synced.\n\nRevision: {{.app.status.sync.revision}}",
+            "footer": {
+              "text": "ArgoCD Notification"
+            }
+          }
+        ]
+      }
+
+  template.app-out-of-sync.webhook: |
+    method: POST
+    body: |
+      {
+        "embeds": [
+          {
+            "title": "⚠️ Application {{.app.metadata.name}} is out of sync",
+            "color": 16761095,
+            "description": "Application {{.app.metadata.name}} is out of sync.\n\nCurrent revision: {{.app.status.sync.revision}}",
+            "footer": {
+              "text": "ArgoCD Notification"
+            }
+          }
+        ]
+      }
+
+  template.app-health-degraded.webhook: |
+    method: POST
+    body: |
+      {
+        "embeds": [
+          {
+            "title": "🔴 Application {{.app.metadata.name}} is degraded",
+            "color": 15158332,
+            "description": "Application {{.app.metadata.name}} is degraded.\n\nReason: {{range .app.status.resources}}{{if eq .health.status \"Degraded\"}}{{.name}}: {{.health.message}}{{end}}{{end}}",
+            "footer": {
+              "text": "ArgoCD Notification"
+            }
+          }
+        ]
+      }
+
+  template.app-health-recovered.webhook: |
+    method: POST
+    body: |
+      {
+        "embeds": [
+          {
+            "title": "🔵 Application {{.app.metadata.name}} has recovered",
+            "color": 3447003,
+            "description": "Application {{.app.metadata.name}} has recovered.\n\nCurrent health status: {{.app.status.health.status}}",
+            "footer": {
+              "text": "ArgoCD Notification"
+            }
+          }
+        ]
+      }

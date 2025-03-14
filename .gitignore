@@ -1,2 +1,10 @@
+# Credential files
+.argocd/
+*-password
+*_password
+*.env
 .env
 .qodo
+
+# Secret environment files
+discord-webhook-secret.yaml
