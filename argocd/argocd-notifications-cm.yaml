@@ -48,6 +48,12 @@ data:
   subscriptions: |
     - recipients:
       - email:ketankarki2626@gmail.com
+      triggers:
+      - on-sync-status-change
+      - on-health-status-change
+      - on-deployed
+      - on-test-now
+    - recipients:
       - webhook:webhook
       triggers:
       - on-sync-status-change
@@ -191,6 +197,7 @@ data:
     method: POST
     body: |
       {
+        "content": "🧪 **ArgoCD Discord Test Notification**",
         "embeds": [
           {
             "title": "🧪 ArgoCD Discord Test Notification",
