@@ -5,9 +5,9 @@ namespace:
 
 studentApi:
   image:
-    repository: ketan-karki/student-api
-    tag: n
-    pullPolicy: IfNotPresent
+    repository: ketankarki/student-api
+    tag: latest
+    pullPolicy: Always
   replicas: 2
   resources:
     requests:
@@ -44,6 +44,6 @@ nginx:
     enabled: true
   image:
     repository: nginx
-    tag: n
+    tag: latest
     pullPolicy: IfNotPresent
   replicas: 2
