@@ -6,7 +6,7 @@ namespace:
 studentApi:
   image:
     repository: student-api
-    tag: latest
+    tag: d426da4
     pullPolicy: Never  # Use Never for local images
   replicas: 1
   resources:
@@ -23,7 +23,7 @@ studentApi:
 postgres:
   image:
     repository: postgres
-    tag: latest
+    tag: d426da4
     pullPolicy: IfNotPresent
   replicas: 1
   resources:
@@ -45,6 +45,6 @@ nginx:
   enabled: true
   image:
     repository: nginx
-    tag: latest
+    tag: d426da4
     pullPolicy: IfNotPresent
   replicas: 1
