@@ -22,8 +22,6 @@ data:
     headers:
     - name: Content-Type
       value: application/json
-    - name: User-Agent
-      value: ArgoCD-Notifications
 
   # Trigger definitions
   trigger.on-sync-status-change: |
@@ -44,7 +42,7 @@ data:
 
   trigger.on-test-now: |
     - when: app.metadata.name == 'student-api-dev' or app.metadata.name == 'student-api-prod'
-      send: [test-notification-{{.context.time}}]
+      send: [test-notification]
 
   # Default subscription using webhook only
   subscriptions: |
@@ -86,9 +84,9 @@ data:
         Application {{.app.metadata.name}} has recovered.
         Current health status: {{.app.status.health.status}}
 
-  template.test-notification-{{.context.time}}: |
+  template.test-notification: |
     email:
-      subject: ArgoCD Test Notification for {{.app.metadata.name}} at {{.context.time}}
+      subject: ArgoCD Test Notification for {{.app.metadata.name}}
       body: |
         This is a test notification to verify email notifications are working properly.
         
@@ -181,7 +179,7 @@ data:
         ]
       }
 
-  template.test-notification-{{.context.time}}.webhook: |
+  template.test-notification.webhook: |
     method: POST
     body: |
       {
