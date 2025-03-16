@@ -23,7 +23,7 @@ To set up the project locally, follow these steps:
 1. **Clone the repository:**
 
    ```bash
-   git clone https://github.com/ketan-karki/student-api.git
+   git clone https://github.com/ketan-karki/sre-student-api.git
    cd student-api
    ```
 

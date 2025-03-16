@@ -8,7 +8,7 @@ echo "=== Comprehensive ArgoCD and Helm Debugging ==="
 NAMESPACE="student-api"
 ARGOCD_NS="argocd"
 APP_NAME="student-api"
-REPO_URL="https://github.com/Ketan-Karki/student-api"
+REPO_URL="https://github.com/Ketan-Karki/sre-student-api"
 CHART_PATH="helm-charts/student-api-helm"
 
 # Functions

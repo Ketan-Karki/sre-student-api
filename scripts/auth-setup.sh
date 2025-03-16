@@ -5,7 +5,7 @@ set -e
 echo "=== ArgoCD Repository Authentication Setup ==="
 
 # Variables
-REPO_URL="https://github.com/Ketan-Karki/student-api"
+REPO_URL="https://github.com/Ketan-Karki/sre-student-api"
 ARGOCD_NS="argocd"
 APP_NAME="student-api"
 

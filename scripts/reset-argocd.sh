@@ -8,7 +8,7 @@ echo "=== Clean Slate Reset for ArgoCD ==="
 NAMESPACE="student-api"
 ARGOCD_NS="argocd"
 APP_NAME="student-api"
-REPO_URL="https://github.com/Ketan-Karki/student-api"
+REPO_URL="https://github.com/Ketan-Karki/sre-student-api"
 
 # Functions
 clean_namespace() {

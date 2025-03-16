@@ -5,7 +5,7 @@ set -e
 echo "=== Simple Repository Access Setup for ArgoCD ==="
 
 # Variables
-REPO_URL="https://github.com/Ketan-Karki/student-api"
+REPO_URL="https://github.com/Ketan-Karki/sre-student-api"
 ARGOCD_NAMESPACE="argocd"
 APP_NAME="student-api"
 

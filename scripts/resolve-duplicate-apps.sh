@@ -97,7 +97,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/Ketan-Karki/student-api
+        repoURL: https://github.com/Ketan-Karki/sre-student-api
         targetRevision: HEAD
         path: helm-charts/student-api-helm
         helm:

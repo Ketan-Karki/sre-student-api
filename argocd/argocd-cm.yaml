@@ -9,17 +9,17 @@ metadata:
 data:
   # Add custom styles and branding
   ui.cssurl: ""
-  
+
   # Set the help chat URL
   help.chatUrl: ""
   help.chatText: ""
-  
+
   # Repository URL configuration
   repositories: |
-    - url: https://github.com/Ketan-Karki/student-api
+    - url: https://github.com/Ketan-Karki/sre-student-api
       name: student-api
       type: git
-  
+
   # Resource exclusions for better performance
   resource.exclusions: |
     - apiGroups:
@@ -34,12 +34,12 @@ data:
       - Endpoints
       clusters:
       - "*"
-  
+
   # Configure timeout settings
   timeout.reconciliation: 180s
-  
+
   # Configure application defaults
   application.instanceLabelKey: argocd.argoproj.io/instance
-  
+
   # Enable status badge
   statusbadge.enabled: "true"
