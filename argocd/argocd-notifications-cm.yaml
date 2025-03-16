@@ -42,6 +42,10 @@ data:
     - when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
       send: [app-deployed]
 
+  trigger.on-test-now: |
+    - when: app.metadata.name == 'student-api-dev' or app.metadata.name == 'student-api-prod'
+      send: [test-notification-{{.context.time}}]
+
   # Default subscription using webhook only
   subscriptions: |
     - recipients:
@@ -51,6 +55,7 @@ data:
       - on-sync-status-change
       - on-health-status-change
       - on-deployed
+      - on-test-now
 
   # Template definitions for email
   template.app-sync-succeeded: |
@@ -80,6 +85,20 @@ data:
       body: |
         Application {{.app.metadata.name}} has recovered.
         Current health status: {{.app.status.health.status}}
+
+  template.test-notification-{{.context.time}}: |
+    email:
+      subject: ArgoCD Test Notification for {{.app.metadata.name}} at {{.context.time}}
+      body: |
+        This is a test notification to verify email notifications are working properly.
+        
+        Application: {{.app.metadata.name}}
+        Status: {{.app.status.sync.status}}
+        Health: {{.app.status.health.status}}
+        
+        Time: {{.context.time}}
+        
+        ArgoCD Notifications
 
   # Webhook templates (in separate keys to avoid JSON parsing issues)
   template.app-sync-succeeded.webhook: |
@@ -157,6 +176,22 @@ data:
             "description": "Application {{.app.metadata.name}} has been successfully deployed.\n\nRevision: {{.app.status.sync.revision}}\nEnvironment: {{if eq .app.metadata.name \"student-api-dev\"}}Development{{else if eq .app.metadata.name \"student-api-prod\"}}Production{{else}}Unknown{{end}}",
             "footer": {
               "text": "ArgoCD Notification - {{.app.status.operationState.finishedAt}}"
+            }
+          }
+        ]
+      }
+
+  template.test-notification-{{.context.time}}.webhook: |
+    method: POST
+    body: |
+      {
+        "embeds": [
+          {
+            "title": "🧪 ArgoCD Discord Test Notification",
+            "color": 16711680,
+            "description": "This is a test notification to verify Discord webhook integration is working properly.\n\nApplication: {{.app.metadata.name}}\nStatus: {{.app.status.sync.status}}\nHealth: {{.app.status.health.status}}\n\nTime: {{.context.time}}",
+            "footer": {
+              "text": "ArgoCD Notification - {{.context.time}}"
             }
           }
         ]

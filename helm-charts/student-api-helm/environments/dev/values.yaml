@@ -30,12 +30,18 @@ studentApi:
       - name: ENV_TYPE
         value: "development"
       - name: LOG_LEVEL
-        value: "info"
+        value: "debug"
+      - name: APP_NAME
+        value: "STUDENT-API"
+      - name: APP_VERSION
+        value: "0.1.0"
     secret:
       - name: DB_HOST
         value: "mongodb-dev:27017"
       - name: DB_NAME
         value: "students-dev"
+
+# Test comment to force new change
 
 postgres:
   image:
