@@ -84,6 +84,14 @@ data:
         Application {{.app.metadata.name}} has recovered.
         Current health status: {{.app.status.health.status}}
 
+  template.app-deployed: |
+    email:
+      subject: Application {{.app.metadata.name}} has been deployed
+      body: |
+        Application {{.app.metadata.name}} has been successfully deployed.
+        Revision: {{.app.status.sync.revision}}
+        Environment: {{if eq .app.metadata.name "student-api-dev"}}Development{{else if eq .app.metadata.name "student-api-prod"}}Production{{else}}Unknown{{end}}
+
   template.test-notification: |
     email:
       subject: ArgoCD Test Notification for {{.app.metadata.name}}
