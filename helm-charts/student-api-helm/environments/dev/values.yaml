@@ -4,44 +4,21 @@ namespace:
   name: dev-student-api
 
 studentApi:
-  replicaCount: 1
   image:
-    repository: nginx
+    repository: student-api
     tag: latest
-    pullPolicy: Always
-  nameOverride: ""
-  fullnameOverride: ""
-  service:
-    type: ClusterIP
-    port: 8080
-    targetPort: 8080
+    pullPolicy: Never  # Use Never for local images
+  replicas: 1
   resources:
-    limits:
-      cpu: 400m
-      memory: 256Mi
     requests:
       cpu: 100m
       memory: 128Mi
-  nodeSelector: {}
-  tolerations: []
-  affinity: {}
-  env:
-    normal:
-      - name: ENV_TYPE
-        value: "development"
-      - name: LOG_LEVEL
-        value: "debug"
-      - name: APP_NAME
-        value: "STUDENT-API"
-      - name: APP_VERSION
-        value: "0.1.0"
-    secret:
-      - name: DB_HOST
-        value: "mongodb-dev:27017"
-      - name: DB_NAME
-        value: "students-dev"
-
-# Test comment to force new change
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  service:
+    type: ClusterIP
+    port: 8080
 
 postgres:
   image:
