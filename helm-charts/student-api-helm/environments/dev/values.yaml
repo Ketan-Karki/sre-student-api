@@ -30,7 +30,7 @@ studentApi:
       - name: ENV_TYPE
         value: "development"
       - name: LOG_LEVEL
-        value: "debug"
+        value: "info"
     secret:
       - name: DB_HOST
         value: "mongodb-dev:27017"

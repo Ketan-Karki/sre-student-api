@@ -16,12 +16,14 @@ data:
       required: true
     auth_required: true
 
-  # Use webhook with URL from a secret
+  # Use webhook with URL directly in the service configuration
   service.webhook: |
     url: https://discord.com/api/webhooks/1350131155873169489/ApqR-3BLwyzHnN-69a_muBG48zNwGD4TBuKOZcYzjAcAf2R2MT3xvIcMl-iI85yYhOph
     headers:
     - name: Content-Type
       value: application/json
+    - name: User-Agent
+      value: ArgoCD-Notifications
 
   # Trigger definitions
   trigger.on-sync-status-change: |
@@ -36,6 +38,10 @@ data:
     - when: app.status.health.status == 'Healthy'
       send: [app-health-recovered]
 
+  trigger.on-deployed: |
+    - when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
+      send: [app-deployed]
+
   # Default subscription using webhook only
   subscriptions: |
     - recipients:
@@ -44,6 +50,7 @@ data:
       triggers:
       - on-sync-status-change
       - on-health-status-change
+      - on-deployed
 
   # Template definitions for email
   template.app-sync-succeeded: |
@@ -134,6 +141,22 @@ data:
             "description": "Application {{.app.metadata.name}} has recovered.\n\nCurrent health status: {{.app.status.health.status}}",
             "footer": {
               "text": "ArgoCD Notification"
+            }
+          }
+        ]
+      }
+
+  template.app-deployed.webhook: |
+    method: POST
+    body: |
+      {
+        "embeds": [
+          {
+            "title": "🚀 Application {{.app.metadata.name}} has been deployed",
+            "color": 4886754,
+            "description": "Application {{.app.metadata.name}} has been successfully deployed.\n\nRevision: {{.app.status.sync.revision}}\nEnvironment: {{if eq .app.metadata.name \"student-api-dev\"}}Development{{else if eq .app.metadata.name \"student-api-prod\"}}Production{{else}}Unknown{{end}}",
+            "footer": {
+              "text": "ArgoCD Notification - {{.app.status.operationState.finishedAt}}"
             }
           }
         ]
