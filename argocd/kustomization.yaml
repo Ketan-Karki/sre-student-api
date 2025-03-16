@@ -8,12 +8,12 @@ resources:
   - argocd-notifications-cm.yaml
   - argocd-rbac-cm.yaml
   - repository-secret.yaml
-  - discord-webhook-secret.yaml
 
 namespace: argocd
 
-secretGenerator:
-- name: discord-webhook-secret
-  namespace: argocd
-  envs:
-  - discord-webhook.env  # This file should NOT be committed to git
+# Comment out the secretGenerator since discord-webhook.env is missing
+# secretGenerator:
+# - name: discord-webhook-secret
+#   namespace: argocd
+#   envs:
+#   - discord-webhook.env  # This file should NOT be committed to git

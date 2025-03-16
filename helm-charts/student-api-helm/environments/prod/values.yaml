@@ -40,7 +40,8 @@ postgres:
 
 nginx:
   configMap:
-    name: nginx-config    name: nginx-config  enabled: true
+    name: nginx-config
+    enabled: true
   image:
     repository: nginx
     tag: n
