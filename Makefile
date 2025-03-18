@@ -7,7 +7,7 @@ VERSION=1.0.0
 NETWORK_NAME=student-api-network
 
 # Targets
-.PHONY: all build run clean test up down logs ps test-api test-api-k8s get-service-url k8s-deploy k8s-test test-helm test-argocd test-all fix-permissions clean-helm-namespace test-helm-clean test-argocd-notifications test-helm-debug build-local-image test-helm-local test-notifications test-email setup-email-password verify-all argocd-ui argocd-verify-deployment argocd-force-deploy debug-argocd setup-node-labels argocd-quick-deploy verify-email-config fix-argocd-controller
+.PHONY: all build run clean test up down logs ps test-api test-api-k8s get-service-url k8s-deploy k8s-test test-helm test-argocd test-all fix-permissions clean-helm-namespace test-helm-clean test-argocd-notifications test-helm-debug build-local-image test-helm-local test-notifications test-email setup-email-password verify-all argocd-ui argocd-verify-deployment argocd-force-deploy debug-argocd setup-node-labels argocd-quick-deploy verify-email-config fix-argocd-controller argocd-setup-repo-creds
 
 # Default target that builds the application
 all: build
@@ -189,6 +189,48 @@ argocd-force-deploy: fix-permissions setup-node-labels
 		echo "Deploying without node selector constraints..."; \
 		SKIP_NODE_SELECTOR=true ./scripts/setup-argocd-declarative.sh; \
 	fi
+
+# Setup Git repository credentials for ArgoCD
+argocd-setup-repo-creds: fix-permissions
+	@echo "Setting up Git repository credentials for ArgoCD..."
+	@read -p "Enter Git repository URL (e.g., https://github.com/yourusername/repo): " REPO_URL; \
+	read -p "Authentication type (https/ssh): " AUTH_TYPE; \
+	if [ "$$AUTH_TYPE" = "https" ]; then \
+		read -p "Enter Git username: " GIT_USERNAME; \
+		read -sp "Enter Git password or token: " GIT_PASSWORD; \
+		echo ""; \
+		echo "Creating repository credentials in ArgoCD..."; \
+		kubectl -n argocd create secret generic git-repo-creds \
+			--from-literal=url=$$REPO_URL \
+			--from-literal=username=$$GIT_USERNAME \
+			--from-literal=password=$$GIT_PASSWORD \
+			--dry-run=client -o yaml | kubectl apply -f -; \
+		kubectl -n argocd label secret git-repo-creds argocd.argoproj.io/secret-type=repository --overwrite; \
+	elif [ "$$AUTH_TYPE" = "ssh" ]; then \
+		read -p "Enter path to SSH private key file: " SSH_KEY_PATH; \
+		if [ ! -f "$$SSH_KEY_PATH" ]; then \
+			echo "Error: SSH key file not found"; \
+			exit 1; \
+		fi; \
+		echo "Creating repository credentials with SSH key in ArgoCD..."; \
+		kubectl -n argocd create secret generic git-repo-creds \
+			--from-literal=url=$$REPO_URL \
+			--from-file=sshPrivateKey=$$SSH_KEY_PATH \
+			--dry-run=client -o yaml | kubectl apply -f -; \
+		kubectl -n argocd label secret git-repo-creds argocd.argoproj.io/secret-type=repository --overwrite; \
+	else \
+		echo "Error: Invalid authentication type. Use 'https' or 'ssh'."; \
+		exit 1; \
+	fi; \
+	echo "Repository credentials created in ArgoCD"; \
+	echo ""; \
+	echo "To verify, check that your applications sync correctly:"; \
+	echo "1. Run 'make argocd-ui' to access the ArgoCD UI"; \
+	echo "2. Look at your applications and verify they sync without errors"; \
+	echo ""; \
+	echo "If problems persist, try refreshing your applications in the UI or CLI:"; \
+	echo "kubectl -n argocd get applications"; \
+	echo "kubectl -n argocd patch application <app-name> -p '{\"metadata\":{\"annotations\":{\"argocd.argoproj.io/refresh\":\"hard\"}}}' --type merge"
 
 # Quick deployment of ArgoCD skipping statefulset wait
 argocd-quick-deploy: fix-permissions setup-node-labels
