@@ -45,6 +45,6 @@ nginx:
   enabled: true
   image:
     repository: nginx
-    tag: alpine
+    tag: latest
     pullPolicy: IfNotPresent
   replicas: 1

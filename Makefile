@@ -46,32 +46,61 @@ get-service-url:
 
 # Deploy to Kubernetes
 k8s-deploy:
-	kubectl apply -f k8s/config/app-config.yaml
-	kubectl apply -f k8s/config/db-secrets.yaml
-	kubectl apply -f k8s/postgres/deployment.yaml
-	kubectl apply -f k8s/postgres/service.yaml
-	kubectl apply -f k8s/student-api/deployment.yaml
-	kubectl apply -f k8s/student-api/service.yaml
+	@echo "Deploying to Kubernetes..."
+	@echo "Creating student-api namespace if it doesn't exist..."
+	kubectl create namespace student-api --dry-run=client -o yaml | kubectl apply -f -
+	
+	@echo "Applying configurations..."
+	kubectl apply -f k8s/config/app-config.yaml -n student-api
+	kubectl apply -f k8s/config/db-secrets.yaml -n student-api
+	
+	@echo "Removing existing deployments to avoid immutable field errors..."
+	kubectl delete deployment postgres -n student-api --ignore-not-found=true
+	kubectl delete deployment student-api -n student-api --ignore-not-found=true
+	
+	@echo "Waiting for deployments to be fully deleted..."
+	@sleep 10
+	
+	@echo "Applying new deployments and services..."
+	kubectl apply -f k8s/postgres/deployment.yaml -n student-api
+	kubectl apply -f k8s/postgres/service.yaml -n student-api
+	kubectl apply -f k8s/student-api/deployment.yaml -n student-api
+	kubectl apply -f k8s/student-api/service.yaml -n student-api
+	
+	@echo "Deployments applied successfully"
 
 # Test API endpoints (now works with both docker-compose and k8s)
 test-api: up
 	@echo "Waiting for services to be ready..."
-	@sleep 10
+	@sleep 20
 	@echo "\nTesting API endpoints..."
-	@echo "\n1. Testing GET /api/v1/students (should be empty initially)"
-	@curl -s -w "\nStatus: %{http_code}\n" http://localhost:8080/api/v1/students || \
-		curl -s -w "\nStatus: %{http_code}\n" $$(minikube service student-api -n student-api --url)/api/v1/students
-	@echo "\n\n2. Testing POST /api/v1/students (creating a new student)"
-	@curl -s -w "\nStatus: %{http_code}\n" -X POST http://localhost:8080/api/v1/students \
+	
+	@# Determine if we're running in k8s or docker-compose
+	@if kubectl get namespace student-api &>/dev/null; then \
+		echo "Detected Kubernetes environment. Using minikube service URL..."; \
+		SERVICE_URL=$$(minikube service student-api -n student-api --url --wait=60s 2>/dev/null) || SERVICE_URL=""; \
+		if [ -z "$$SERVICE_URL" ]; then \
+			echo "⚠️ Could not get minikube service URL. Falling back to localhost..."; \
+			SERVICE_URL="http://localhost:8080"; \
+		fi; \
+		echo "Using service URL: $$SERVICE_URL"; \
+	else \
+		echo "Using Docker Compose environment"; \
+		SERVICE_URL="http://localhost:8080"; \
+	fi; \
+	\
+	echo "\n1. Testing GET /api/v1/students (should be empty initially)"; \
+	curl -s -w "\nStatus: %{http_code}\n" $$SERVICE_URL/api/v1/students || echo "Request failed"; \
+	\
+	echo "\n\n2. Testing POST /api/v1/students (creating a new student)"; \
+	curl -s -w "\nStatus: %{http_code}\n" -X POST $$SERVICE_URL/api/v1/students \
 		-H "Content-Type: application/json" \
-		-d '{"name":"Test Student","age":20,"grade":"A+"}' || \
-		curl -s -w "\nStatus: %{http_code}\n" -X POST $$(minikube service student-api -n student-api --url)/api/v1/students \
-		-H "Content-Type: application/json" \
-		-d '{"name":"Test Student","age":20,"grade":"A+"}'
-	@echo "\n\n3. Testing GET /api/v1/students again (should show the new student)"
-	@curl -s -w "\nStatus: %{http_code}\n" http://localhost:8080/api/v1/students || \
-		curl -s -w "\nStatus: %{http_code}\n" $$(minikube service student-api -n student-api --url)/api/v1/students
-	@echo "\n\nAPI tests completed. Check the responses above."
+		-d '{"name":"Test Student","age":20,"grade":"A+"}' || echo "Request failed"; \
+	\
+	echo "\n\n3. Testing GET /api/v1/students again (should show the new student)"; \
+	curl -s -w "\nStatus: %{http_code}\n" $$SERVICE_URL/api/v1/students || echo "Request failed"; \
+	\
+	echo "\n\nAPI tests completed. Check the responses above."
 
 # Test API endpoints in Kubernetes
 test-api-k8s:
