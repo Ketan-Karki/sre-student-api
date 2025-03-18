@@ -415,3 +415,48 @@ verify-all: fix-permissions
 	@echo "Then navigate to https://localhost:9090 in your browser"
 	@echo "\nCleanup recommended after verification:"
 	@echo "make clean"
+
+# Fix ArgoCD sync issues with immutable fields
+argocd-fix-sync: fix-permissions
+	@echo "Fixing ArgoCD sync issues for student-api-dev..."
+	@echo "1. Deleting problematic deployment from the cluster..."
+	@kubectl delete deployment student-api -n dev-student-api --ignore-not-found=true
+	@echo "2. Patching ArgoCD application to use 'Replace' instead of 'Patch'..."
+	@kubectl patch application student-api-dev -n argocd --type=merge -p '{"spec":{"syncPolicy":{"syncOptions":["RespectIgnoreDifferences=true","Replace=true"]}}}'
+	@echo "3. Annotating application to trigger a hard refresh..."
+	@kubectl patch application student-api-dev -n argocd --type=merge -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}'
+	@echo "4. Forcing sync with replace strategy..."
+	@kubectl exec -it -n argocd deployment/argocd-server -- argocd app sync student-api-dev --replace --force || echo "⚠️  CLI sync failed, but the annotations should trigger a sync anyway"
+	@echo "\n5. Verifying application status (may take a moment to update):"
+	@kubectl get application student-api-dev -n argocd -o jsonpath='{.status.health.status}{" | "}{.status.sync.status}{"\n"}'
+	@echo "\nSync issue should be resolved. If the application is still 'OutOfSync', run 'make argocd-ui' to check details in the UI."
+
+# Update ArgoCD notification settings to reduce email spam
+argocd-update-notifications: fix-permissions
+	@echo "Updating ArgoCD notification settings to reduce email spam..."
+	@echo 'apiVersion: v1' > /tmp/argocd-notifications.yaml
+	@echo 'kind: ConfigMap' >> /tmp/argocd-notifications.yaml
+	@echo 'metadata:' >> /tmp/argocd-notifications.yaml
+	@echo '  name: argocd-notifications-cm' >> /tmp/argocd-notifications.yaml
+	@echo '  namespace: argocd' >> /tmp/argocd-notifications.yaml
+	@echo 'data:' >> /tmp/argocd-notifications.yaml
+	@echo '  subscriptions: |' >> /tmp/argocd-notifications.yaml
+	@echo '    - recipients:' >> /tmp/argocd-notifications.yaml
+	@echo '        - email: ketankarki2626@gmail.com' >> /tmp/argocd-notifications.yaml
+	@echo '      triggers:' >> /tmp/argocd-notifications.yaml
+	@echo '        - on-sync-succeeded' >> /tmp/argocd-notifications.yaml
+	@echo '        - on-sync-failed' >> /tmp/argocd-notifications.yaml
+	@echo '        - on-health-degraded' >> /tmp/argocd-notifications.yaml
+	@echo '      template: default' >> /tmp/argocd-notifications.yaml
+	@echo '  templates: |' >> /tmp/argocd-notifications.yaml
+	@echo '    default: |' >> /tmp/argocd-notifications.yaml
+	@echo '      email:' >> /tmp/argocd-notifications.yaml
+	@echo '        subject: "Application {{.app.metadata.name}} {{.app.status.sync.status}}"' >> /tmp/argocd-notifications.yaml
+	@echo '        body: |' >> /tmp/argocd-notifications.yaml
+	@echo '          Application {{.app.metadata.name}} has {{.app.status.sync.status}}.' >> /tmp/argocd-notifications.yaml
+	@echo '          Current health status: {{.app.status.health.status}}.' >> /tmp/argocd-notifications.yaml
+	@echo '          Revision: {{.app.status.operationState.syncResult.revision}}.' >> /tmp/argocd-notifications.yaml
+	@echo '          Environment: {{.app.metadata.labels.environment}}.' >> /tmp/argocd-notifications.yaml
+	@kubectl apply -f /tmp/argocd-notifications.yaml
+	@rm -f /tmp/argocd-notifications.yaml
+	@echo "ArgoCD notification settings updated. You should receive fewer emails now."
