@@ -30,9 +30,17 @@ spec:
       - PrunePropagationPolicy=foreground
       - PruneLast=true
       - ApplyOutOfSyncOnly=true
+      - Replace=true
     retry:
       limit: 5
       backoff:
         duration: 5s
         factor: 2
         maxDuration: 3m
+  # Add ignoreDifferences to handle immutable fields
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/selector
+        - /spec/template/metadata/labels
