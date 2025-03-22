@@ -18,7 +18,7 @@ data:
 
   # Use webhook with URL directly in the service configuration
   service.webhook.discord: |
-    url: https://discord.com/api/webhooks/1350131155873169489/ApqR-3BLwyzHnN-69a_muBG48zNwGD4TBuKOZcYzjAcAf2R2MT3xvIcMl-iI85yYhOph
+    url: $discord-webhook-url
     headers:
     - name: Content-Type
       value: application/json
