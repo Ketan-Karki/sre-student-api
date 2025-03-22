@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: student-api-dev
+  namespace: argocd
+  annotations:
+    notifications.argoproj.io/subscribe.on-sync-status-change.discord: ""
+    notifications.argoproj.io/subscribe.on-health-status-change.discord: ""
+    notifications.argoproj.io/subscribe.on-deployed.discord: ""
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Ketan-Karki/sre-student-api
+    targetRevision: HEAD
+    path: helm-charts/student-api-helm
+    helm:
+      valueFiles:
+        - environments/dev/values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dev-student-api
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+      - ServerSideApply=true
+      - Replace=true # Add this option to handle immutable fields
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: student-api
+      jsonPointers:
+        - /spec/selector
+        - /spec/template/metadata/labels
+        - /spec/selector/matchLabels
+    - group: ""
+      kind: PersistentVolumeClaim
+      jsonPointers:
+        - /spec/volumeName
+        - /spec/storageClassName
+        - /spec/volumeMode

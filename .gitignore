@@ -8,3 +8,4 @@
 
 # Secret environment files
 discord-webhook-secret.yaml
+github-repo-secret.yaml
