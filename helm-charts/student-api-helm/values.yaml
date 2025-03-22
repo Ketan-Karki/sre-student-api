@@ -21,7 +21,7 @@ namespace:
 studentApi:
   image:
     repository: ketan-karki/student-api
-    tag: d426da4
+    tag: 5506bee
     pullPolicy: IfNotPresent
   replicas: 1
   resources:
@@ -39,7 +39,7 @@ studentApi:
 postgres:
   image:
     repository: postgres
-    tag: d426da4
+    tag: 5506bee
     pullPolicy: IfNotPresent
   replicas: 1
   resources:
@@ -67,7 +67,7 @@ nginx:
   enabled: true
   image:
     repository: nginx
-    tag: d426da4
+    tag: 5506bee
     pullPolicy: IfNotPresent
   replicas: 1
   configMap:
