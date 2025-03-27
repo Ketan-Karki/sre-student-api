@@ -188,14 +188,8 @@ test-argocd: fix-permissions setup-node-labels
 
 # Access ArgoCD UI with credentials
 argocd-ui: fix-permissions
-	@echo "Setting up port forwarding to access ArgoCD UI..."
-	@echo "ArgoCD admin username: admin"
-	@echo -n "ArgoCD admin password: "
-	@kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d || echo "Password not found. ArgoCD might be using a custom password."
-	@echo "\nStarting port forwarding to ArgoCD UI (namespace: argocd)..."
-	@echo "Access the UI at: https://localhost:9090"
-	@echo "Press Ctrl+C to stop port forwarding when done."
-	@kubectl port-forward svc/argocd-server -n argocd 9090:443
+	@chmod +x ./scripts/argocd-ui.sh
+	@./scripts/argocd-ui.sh
 
 # Verify ArgoCD deployment on correct node
 argocd-verify-deployment: fix-permissions
