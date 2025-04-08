@@ -3,7 +3,7 @@ FROM --platform=linux/arm64 golang:1.23.5-alpine AS builder
 WORKDIR /app
 
 # Install build dependencies
-RUN apk add --no-cache ca-certificates=20241121-r1 tzdata=2025a-r0 gcc musl-dev
+RUN apk add --no-cache ca-certificates tzdata gcc musl-dev
 
 # Copy dependency files
 COPY go.mod go.sum ./
@@ -20,7 +20,7 @@ FROM --platform=linux/arm64 alpine:3.19
 WORKDIR /app
 
 # Install runtime dependencies
-RUN apk add --no-cache ca-certificates=20241121-r1 tzdata=2025a-r0 postgresql-client
+RUN apk add --no-cache ca-certificates tzdata postgresql-client
 
 # Copy necessary files
 COPY --from=builder /app/main /app/main
