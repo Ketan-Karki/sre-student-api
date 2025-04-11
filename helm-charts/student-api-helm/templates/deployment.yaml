@@ -16,6 +16,11 @@ spec:
         {{- include "student-api.selectorLabels" . | nindent 8 }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if .Values.studentApi.metrics.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+        {{- end }}
     spec:
       {{- if .Values.imageCredentials.createSecret }}
       imagePullSecrets:

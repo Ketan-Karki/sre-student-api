@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - prometheus/prometheus-configmap.yaml
+  - prometheus/prometheus-deployment.yaml
+  - prometheus/prometheus-service.yaml
+  - loki/loki-configmap.yaml
+  - loki/loki-deployment.yaml
+  - loki/loki-service.yaml
+  - grafana/grafana-datasources.yaml
+  - grafana/grafana-deployment.yaml
+  - grafana/grafana-service.yaml

@@ -34,6 +34,9 @@ studentApi:
   service:
     type: ClusterIP
     port: 8080
+  # Metrics configuration for Prometheus
+  metrics:
+    enabled: false
 
 # PostgreSQL configuration
 postgres:
@@ -55,7 +58,7 @@ postgres:
   persistence:
     enabled: true
     size: 1Gi
-  
+
   # Database credentials
   database:
     name: api
