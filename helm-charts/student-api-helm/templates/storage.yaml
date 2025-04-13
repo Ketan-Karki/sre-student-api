@@ -1,0 +1,65 @@
+{{- if not .Values.postgres.persistence.storageClass }}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Release.Name }}-local-storage
+  labels:
+    {{- include "student-api.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+provisioner: k8s.io/minikube-hostpath
+volumeBindingMode: Immediate
+{{- end }}
+---
+{{- if and .Values.postgres.persistence.enabled (not .Values.postgres.persistence.forceEmptyDir) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-postgres-data
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "student-api.labels" . | nindent 4 }}
+    app: postgres
+    release: {{ .Release.Name }}
+  annotations:
+    helm.sh/resource-policy: delete
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.postgres.persistence.storageClass }}
+  {{- if (eq "-" .Values.postgres.persistence.storageClass) }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ .Values.postgres.persistence.storageClass }}
+  {{- end }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.postgres.persistence.size }}
+{{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "student-api.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/resource-policy": keep
+    "helm.sh/hook-weight": "0"
+    meta.helm.sh/release-name: {{ .Release.Name }}
+    meta.helm.sh/release-namespace: {{ .Release.Namespace }}
+spec:
+  {{- if .Values.postgres.persistence.storageClass }}
+  storageClassName: {{ .Values.postgres.persistence.storageClass }}
+  {{- else }}
+  storageClassName: {{ .Release.Name }}-local-storage
+  {{- end }}
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.postgres.persistence.size }}

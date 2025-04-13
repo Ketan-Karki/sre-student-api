@@ -52,3 +52,10 @@ Create image pull secret
 {{- end }}
 {{- end }}
 {{- end }}
+
+{{/*
+Create postgres PVC name
+*/}}
+{{- define "student-api.postgresVolumeName" -}}
+{{- printf "%s-%s-%s" .Release.Name "db-volume" (randAlphaNum 5 | lower) | trunc 63 -}}
+{{- end -}}

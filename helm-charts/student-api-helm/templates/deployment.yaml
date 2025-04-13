@@ -5,6 +5,10 @@ metadata:
   namespace: {{ .Values.namespace.name }}
   labels:
     {{- include "student-api.labels" . | nindent 4 }}
+  annotations:
+    meta.helm.sh/release-name: {{ .Release.Name }}
+    meta.helm.sh/release-namespace: {{ .Release.Namespace }}
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
   replicas: {{ .Values.studentApi.replicas }}
   selector:
@@ -45,18 +49,35 @@ kind: Deployment
 metadata:
   name: postgres
   namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "student-api.labels" . | nindent 4 }}
+    app: postgres
+  annotations:
+    meta.helm.sh/release-name: {{ .Release.Name }}
+    meta.helm.sh/release-namespace: {{ .Release.Namespace }}
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "5"  # Ensure this runs after PVC creation
 spec:
   replicas: {{ .Values.postgres.replicas }}
   selector:
     matchLabels:
+      {{- include "student-api.selectorLabels" . | nindent 6 }}
       app: postgres
   template:
     metadata:
       labels:
+        {{- include "student-api.selectorLabels" . | nindent 8 }}
         app: postgres
       annotations:
+        {{- if .Values.postgres.exporter.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9187"
+        prometheus.io/path: "/metrics"
+        {{- end }}
         rollme: {{ randAlphaNum 5 | quote }}
     spec:
+      securityContext:
+        fsGroup: 999
       {{- if .Values.imageCredentials.createSecret }}
       imagePullSecrets:
         - name: {{ .Values.imageCredentials.secretName }}
@@ -79,10 +100,50 @@ spec:
           volumeMounts:
             - name: postgres-storage
               mountPath: /var/lib/postgresql/data
+        {{- if .Values.postgres.exporter.enabled }}
+        - name: postgres-exporter
+          image: "{{ .Values.postgres.exporter.image.repository }}:{{ .Values.postgres.exporter.image.tag }}"
+          imagePullPolicy: {{ .Values.postgres.exporter.image.pullPolicy }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+          ports:
+            - containerPort: 9187
+              name: metrics
+          env:
+            - name: DATA_SOURCE_NAME
+              value: "postgresql://{{ .Values.postgres.database.user }}:{{ .Values.postgres.database.password }}@localhost:5432/{{ .Values.postgres.database.name }}?sslmode=disable"
+          resources:
+            {{- toYaml .Values.postgres.exporter.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /health
+              port: metrics
+            failureThreshold: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: metrics
+            initialDelaySeconds: 0
+            timeoutSeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health  
+              port: metrics
+            initialDelaySeconds: 0
+            timeoutSeconds: 5
+            periodSeconds: 10
+        {{- end }}
       volumes:
         - name: postgres-storage
+          {{- if .Values.postgres.persistence.forceEmptyDir }}
+          emptyDir: {}
+          {{- else }}
           persistentVolumeClaim:
-            claimName: postgres-pvc
+            claimName: {{ .Release.Name }}-postgres-data
+          {{- end }}
 {{- if .Values.nginx.enabled }}
 ---
 apiVersion: apps/v1
@@ -90,14 +151,23 @@ kind: Deployment
 metadata:
   name: nginx
   namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "student-api.labels" . | nindent 4 }}
+    app: nginx
+  annotations:
+    meta.helm.sh/release-name: {{ .Release.Name }}
+    meta.helm.sh/release-namespace: {{ .Release.Namespace }}
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
   replicas: {{ .Values.nginx.replicas }}
   selector:
     matchLabels:
+      {{- include "student-api.selectorLabels" . | nindent 6 }}
       app: nginx
   template:
     metadata:
       labels:
+        {{- include "student-api.selectorLabels" . | nindent 8 }}
         app: nginx
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}

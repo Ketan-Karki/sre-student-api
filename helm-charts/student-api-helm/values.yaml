@@ -14,14 +14,14 @@ imageCredentials:
 
 # Namespace configuration
 namespace:
-  create: true
+  create: false
   name: "student-api"
 
 # Student API configuration
 studentApi:
   image:
-    repository: ketan-karki/student-api
-    tag: 66779b1
+    repository: nginx # Using nginx as a fallback for testing
+    tag: latest
     pullPolicy: IfNotPresent
   replicas: 1
   resources:
@@ -36,13 +36,15 @@ studentApi:
     port: 8080
   # Metrics configuration for Prometheus
   metrics:
-    enabled: false
+    enabled: true # Enable API metrics collection
+    path: /metrics
+    port: 8080
 
 # PostgreSQL configuration
 postgres:
   image:
     repository: postgres
-    tag: 66779b1
+    tag: 15.3 # More stable version
     pullPolicy: IfNotPresent
   replicas: 1
   resources:
@@ -57,13 +59,36 @@ postgres:
     port: 5432
   persistence:
     enabled: true
+    storageClass: "" # Empty string means use default storage class
     size: 1Gi
+    # For emergency use - set to true to force emptyDir instead of PVC
+    forceEmptyDir: true # Default to emptyDir for stability
+    # PVC name will be generated based on release name
 
   # Database credentials
   database:
     name: api
     user: postgres
     password: postgres
+
+  exporter:
+    enabled: true
+    image:
+      repository: bitnami/postgres-exporter # More stable image
+      tag: 0.10.1
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    # Prometheus annotations for service discovery
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9187"
+      prometheus.io/path: "/metrics"
 
 # NGINX configuration
 nginx:
