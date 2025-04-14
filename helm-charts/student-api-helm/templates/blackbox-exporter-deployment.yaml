@@ -1,0 +1,78 @@
+{{- if .Values.blackboxExporter.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.blackboxExporter.configMapName | default (printf "%s-config" .Values.blackboxExporter.name) }}
+  namespace: {{ .Values.namespace.name }}
+data:
+  blackbox.yml: |
+    modules:
+      {{- range $name, $module := .Values.blackboxExporter.config.modules }}
+      {{ $name }}:
+        {{- toYaml $module | nindent 8 }}
+      {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.blackboxExporter.name }}
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: {{ .Values.blackboxExporter.name }}
+spec:
+  replicas: {{ .Values.blackboxExporter.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Values.blackboxExporter.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.blackboxExporter.name }}
+      annotations:
+        {{- with .Values.blackboxExporter.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.blackboxExporter.serviceAccount.create }}
+      serviceAccountName: {{ .Values.blackboxExporter.serviceAccount.name }}
+      {{- end }}
+      initContainers:
+        - name: init-connectivity-check
+          image: curlimages/curl:latest
+          command:
+            - sh
+            - -c
+            - |
+              echo "Testing TCP connectivity to postgres-service:5432"
+              nc -z -v -w2 postgres-service 5432 || echo "Warning: Cannot connect to PostgreSQL"
+              echo "Testing TCP connectivity to student-api:8080"
+              nc -z -v -w2 student-api 8080 || echo "Warning: Cannot connect to Student API"
+              echo "Testing TCP connectivity to nginx-service:80"
+              nc -z -v -w2 nginx-service 80 || echo "Warning: Cannot connect to NGINX"
+      containers:
+        - name: {{ .Values.blackboxExporter.name }}
+          image: "{{ .Values.blackboxExporter.image.repository }}:{{ .Values.blackboxExporter.image.tag }}"
+          imagePullPolicy: {{ .Values.blackboxExporter.image.pullPolicy }}
+          args:
+            - "--config.file=/etc/blackbox_exporter/blackbox.yml"
+          ports:
+            - name: http
+              containerPort: 9115
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+          resources:
+            {{- toYaml .Values.blackboxExporter.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/blackbox_exporter
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Values.blackboxExporter.configMapName | default (printf "%s-config" .Values.blackboxExporter.name) }}
+{{- end }}

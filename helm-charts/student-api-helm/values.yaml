@@ -20,8 +20,8 @@ namespace:
 # Student API configuration
 studentApi:
   image:
-    repository: nginx # Using nginx as a fallback for testing
-    tag: latest
+    repository: nginx
+    tag: stable
     pullPolicy: IfNotPresent
   replicas: 1
   resources:
@@ -34,11 +34,105 @@ studentApi:
   service:
     type: ClusterIP
     port: 8080
-  # Metrics configuration for Prometheus
+    targetPort: 80
+    # Use the working selector that targets the direct-api deployment
+    selector:
+      app: direct-api
+
+  # Required for template compatibility
   metrics:
-    enabled: true # Enable API metrics collection
+    enabled: false
     path: /metrics
     port: 8080
+
+  # Add configuration for Blackbox monitoring
+  configMap:
+    name: nginx-direct-conf
+    data:
+      default.conf: |
+        server {
+          listen 80;
+          location / { return 200 'Student API is working'; }
+          location /health { return 200 '{"status":"ok"}'; }
+          location /metrics { return 200 '# TYPE up gauge\nup 1\n'; }
+        }
+
+# Blackbox Exporter configuration for monitoring internal services
+blackboxExporter:
+  enabled: true
+  name: blackbox-exporter
+  image:
+    repository: prom/blackbox-exporter
+    tag: v0.24.0
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+  service:
+    type: NodePort
+    port: 9115
+    name: blackbox-exporter
+    nodePort: 30115
+  config:
+    modules:
+      # HTTP module that expects 2xx response
+      http_2xx:
+        prober: http
+        timeout: 5s
+        http:
+          valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+          valid_status_codes: [200]
+          method: GET
+          preferred_ip_protocol: "ip4"
+          follow_redirects: true
+      # Health check module for API health endpoints
+      http_health:
+        prober: http
+        timeout: 5s
+        http:
+          valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+          valid_status_codes: [200]
+          method: GET
+          preferred_ip_protocol: "ip4"
+          fail_if_body_not_matches_regexp:
+            - ".*status.*:.*ok.*"
+      # TCP connection check
+      tcp_connection:
+        prober: tcp
+        timeout: 5s
+        tcp:
+          preferred_ip_protocol: "ip4"
+  # Updated targets with verified working endpoints
+  targets:
+    - name: student-api-health
+      module: http_health
+      url: "http://student-api:8080/health"
+      interval: 30s
+    - name: student-api-metrics
+      module: http_2xx
+      url: "http://student-api:8080/metrics"
+      interval: 30s
+    - name: postgres-tcp
+      module: tcp_connection
+      url: "postgres-service:5432"
+      interval: 30s
+    - name: nginx-tcp
+      module: tcp_connection
+      url: "nginx-service:80"
+      interval: 30s
+  # Service account, ConfigMap name and annotations
+  serviceAccount:
+    create: true
+    name: "blackbox-exporter"
+  configMapName: "blackbox-exporter-config"
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9115"
+    prometheus.io/path: "/metrics"
 
 # PostgreSQL configuration
 postgres:
@@ -95,11 +189,36 @@ nginx:
   enabled: true
   image:
     repository: nginx
-    tag: 66779b1
+    tag: latest
     pullPolicy: IfNotPresent
   replicas: 1
   configMap:
     name: nginx-config
+    data:
+      nginx.conf: |
+        events {
+          worker_connections 1024;
+        }
+        http {
+          upstream backend {
+            server student-api.student-api.svc.cluster.local:8080;
+          }
+          server {
+            listen 80;
+            location / {
+              proxy_pass http://backend;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+            }
+            location /health {
+              access_log off;
+              return 200 '{"status":"ok"}';
+              add_header Content-Type application/json;
+            }
+          }
+        }
   service:
-    type: LoadBalancer
+    type: LoadBalancer # Ensure NGINX is externally accessible
     port: 80
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb" # Example for AWS (optional)

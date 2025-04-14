@@ -87,3 +87,43 @@ echo "  curl http://localhost:9187/metrics"
 echo ""
 echo "To clean up:"
 echo "  kubectl delete namespace $NAMESPACE"
+
+NAMESPACE="student-api"
+
+echo "=== Setting up Blackbox Monitoring ==="
+
+# Update Blackbox Exporter targets
+echo "Creating or updating Blackbox Exporter targets..."
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blackbox-targets
+  namespace: $NAMESPACE
+data:
+  targets.json: |
+    [
+      {"name": "student-api-health", "url": "http://student-api:8080/health", "module": "http_2xx", "interval": "30s"},
+      {"name": "student-api-metrics", "url": "http://student-api:8080/metrics", "module": "http_2xx", "interval": "30s"},
+      {"name": "postgres-tcp", "url": "postgres-service:5432", "module": "tcp_connection", "interval": "30s"},
+      {"name": "nginx-service", "url": "http://nginx-service/health", "module": "http_2xx", "interval": "30s"}
+    ]
+EOF
+
+# Test Blackbox Exporter endpoints
+echo "Testing Blackbox Exporter..."
+BLACKBOX_POD=$(kubectl get pod -n $NAMESPACE -l app=blackbox-exporter -o name | head -1)
+if [ -n "$BLACKBOX_POD" ]; then
+  echo "Querying Blackbox Exporter metrics..."
+  kubectl exec -n $NAMESPACE $BLACKBOX_POD -- wget -qO- localhost:9115/metrics | grep -i probe
+else
+  echo "Blackbox Exporter pod not found"
+fi
+
+# Run a test against student-api through Blackbox Exporter
+echo "Testing student-api monitoring via Blackbox Exporter..."
+kubectl run test-blackbox -n $NAMESPACE --image=curlimages/curl --restart=Never --rm -it -- \
+  curl "blackbox-exporter:9115/probe?target=student-api:8080/health&module=http_2xx" || \
+  echo "Test blackbox failed"
+
+echo "=== Monitoring Setup Complete ==="
