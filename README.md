@@ -186,11 +186,13 @@ See the [ArgoCD Configuration](#argocd-configuration) section below.
 #### Option 3: Step-by-Step Manual Deployment
 
 1. **Create the namespace:**
+
    ```bash
    kubectl create namespace student-api
    ```
 
 2. **Deploy PostgreSQL:**
+
    ```bash
    kubectl apply -f k8s/config/db-secrets.yaml
    kubectl apply -f k8s/postgres/deployment.yaml
@@ -198,6 +200,7 @@ See the [ArgoCD Configuration](#argocd-configuration) section below.
    ```
 
 3. **Deploy the Student API:**
+
    ```bash
    kubectl apply -f k8s/config/app-config.yaml
    kubectl apply -f k8s/student-api/deployment.yaml
@@ -227,6 +230,7 @@ kubectl get svc -n student-api
 ```
 
 You can also use our verification script:
+
 ```bash
 ./verify-deployment.sh
 ```
@@ -236,12 +240,15 @@ You can also use our verification script:
 The application is exposed through the NGINX service:
 
 1. **Port Forwarding (Development):**
+
    ```bash
    kubectl port-forward svc/nginx-service 8080:80 -n student-api
    ```
+
    Then access the application at: http://localhost:8080
 
 2. **LoadBalancer (Cloud Providers):**
+
    ```bash
    export SERVICE_IP=$(kubectl get svc -n student-api nginx-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
    echo http://$SERVICE_IP
@@ -257,16 +264,19 @@ The application is exposed through the NGINX service:
 If you encounter issues with your deployment:
 
 1. **Check pod status:**
+
    ```bash
    kubectl describe pod -n student-api <pod-name>
    ```
 
 2. **View logs:**
+
    ```bash
    kubectl logs -n student-api <pod-name>
    ```
 
 3. **Fix service connectivity:**
+
    ```bash
    ./scripts/fix-service-connectivity.sh student-api
    ```
@@ -403,8 +413,9 @@ For detailed information on testing the ArgoCD and Helm components, see [ArgoCD 
    # Using our helper script
    ./scripts/simple-repo-auth.sh
    ```
-   
+
    Or manually:
+
    ```bash
    # Create a secret with your GitHub credentials
    kubectl create secret generic github-repo-creds \
@@ -440,11 +451,13 @@ kubectl describe application student-api -n argocd
 If you encounter issues with ArgoCD:
 
 1. **Reset ArgoCD configuration:**
+
    ```bash
    ./scripts/reset-argocd.sh
    ```
 
 2. **Debug ArgoCD deployment:**
+
    ```bash
    ./scripts/debug-argocd-deploy.sh
    ```
