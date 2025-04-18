@@ -354,6 +354,58 @@ Default Grafana login is admin/admin
 kubectl exec -n student-api $(kubectl get pods -n student-api -l app.kubernetes.io/name=student-api -o name | head -1) -- curl -s http://localhost/api/v1/students
 ```
 
+#### Logging with Loki
+
+The project uses Grafana Loki for log aggregation and management. Loki is designed to be cost-effective and highly scalable, focusing on logs instead of metrics.
+
+**Loki Architecture**
+
+![Loki Architecture](https://grafana.com/docs/loki/latest/fundamentals/architecture/loki_architecture_components.svg)
+
+Our logging implementation follows the Loki-based logging stack:
+
+1. **Loki Server** - The main component responsible for storing and querying logs
+2. **Log Collection** - Kubernetes logs are collected and shipped to Loki
+3. **Grafana** - For querying and visualizing logs using LogQL
+
+**Key Features Implemented:**
+
+- Efficient log storage using compressed chunks
+- Label-based indexing for optimized queries
+- Integration with Grafana for unified observability
+- LogQL for powerful log querying capabilities
+
+**How to access Loki logs:**
+
+```bash
+# Through Grafana (recommended)
+kubectl port-forward svc/grafana-nodeport -n observability 3000:3000
+# Then navigate to Explore and select Loki as the data source
+
+# Direct Loki API access
+kubectl port-forward svc/loki-nodeport -n observability 30100:3100
+```
+
+**Querying logs with LogQL:**
+
+Basic queries to get you started with LogQL:
+
+- View all logs from student-api: `{namespace="student-api"}`
+- Filter by log level: `{namespace="student-api"} |= "ERROR"`
+- Filter by container: `{namespace="student-api", container="student-api"}`
+
+**Testing your logging setup:**
+
+```bash
+# Verify Loki is collecting logs
+./scripts/test-observability.sh
+
+# Generate some log entries
+kubectl exec -n student-api $(kubectl get pods -n student-api -l app.kubernetes.io/name=student-api -o name | head -1) -- curl -s http://localhost/api/v1/students
+```
+
+For more information on using Loki, see [Grafana Loki Documentation](https://grafana.com/docs/loki/latest/).
+
 ## CI/CD Pipeline
 
 This project uses GitHub Actions for continuous integration and deployment. The pipeline automatically builds and pushes Docker images to GitHub Container Registry (GHCR) when:
