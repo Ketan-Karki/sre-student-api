@@ -159,83 +159,137 @@ docker run -d -p 8080:80 ketan-karki/student-api
 
 - Kubernetes cluster (local or cloud-based)
 - kubectl configured to interact with your cluster
-- Helm (optional, for package management)
+- Helm v3 or later installed
+- Access to container images (or ability to build them)
+- For local development: Minikube or Docker Desktop with Kubernetes
 
-### Deployment Steps
+### Deployment Options
 
-1. **Create Required Namespaces:**
+You can deploy the Student API application using one of the following methods:
 
+#### Option 1: Quick Deployment with Helm
+
+```bash
+# Create namespace
+kubectl create namespace student-api
+
+# Install using Helm
+helm install student-api ./helm-charts/student-api-helm \
+  --namespace student-api \
+  --values ./helm-charts/student-api-helm/environments/prod/values.yaml
+```
+
+#### Option 2: GitOps-Based Deployment with ArgoCD
+
+See the [ArgoCD Configuration](#argocd-configuration) section below.
+
+#### Option 3: Step-by-Step Manual Deployment
+
+1. **Create the namespace:**
    ```bash
-   kubectl apply -f k8s/namespaces/namespaces.yaml
+   kubectl create namespace student-api
    ```
 
-2. **Deploy Database:**
-
+2. **Deploy PostgreSQL:**
    ```bash
-   # Create Postgres secrets and config
    kubectl apply -f k8s/config/db-secrets.yaml
-
-   # Deploy Postgres
-   kubectl apply -f k8s/postgres/pv.yaml
    kubectl apply -f k8s/postgres/deployment.yaml
    kubectl apply -f k8s/postgres/service.yaml
    ```
 
-3. **Deploy Application:**
-
+3. **Deploy the Student API:**
    ```bash
-   # Create application config
    kubectl apply -f k8s/config/app-config.yaml
-
-   # Deploy Student API
    kubectl apply -f k8s/student-api/deployment.yaml
    kubectl apply -f k8s/student-api/service.yaml
    ```
 
-4. **Verify Deployment:**
+4. **Deploy NGINX:**
    ```bash
-   kubectl get pods -n student-api
-   kubectl get svc -n student-api
+   kubectl apply -f k8s/config/nginx-config.yaml
+   kubectl apply -f k8s/deployments/nginx-deployment.yaml
+   kubectl apply -f k8s/services/nginx-service.yaml
    ```
+
+### Verifying Deployment
+
+After deployment, verify that all components are running:
+
+```bash
+# Check all resources
+kubectl get all -n student-api
+
+# Verify pod status
+kubectl get pods -n student-api
+
+# Check services
+kubectl get svc -n student-api
+```
+
+You can also use our verification script:
+```bash
+./verify-deployment.sh
+```
 
 ### Accessing the Application
 
-The application is exposed through a ClusterIP service. To access it:
+The application is exposed through the NGINX service:
 
-1. **Using Port Forward:**
-
+1. **Port Forwarding (Development):**
    ```bash
-   kubectl port-forward svc/student-api 8080:8080 -n student-api
+   kubectl port-forward svc/nginx-service 8080:80 -n student-api
+   ```
+   Then access the application at: http://localhost:8080
+
+2. **LoadBalancer (Cloud Providers):**
+   ```bash
+   export SERVICE_IP=$(kubectl get svc -n student-api nginx-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+   echo http://$SERVICE_IP
    ```
 
-2. **Through Ingress (if configured):**
-   Access via your configured domain name
+3. **NodePort (Minikube):**
+   ```bash
+   minikube service nginx-service -n student-api
+   ```
 
-### Monitoring the Deployment
+### Troubleshooting
 
-Check deployment status:
+If you encounter issues with your deployment:
+
+1. **Check pod status:**
+   ```bash
+   kubectl describe pod -n student-api <pod-name>
+   ```
+
+2. **View logs:**
+   ```bash
+   kubectl logs -n student-api <pod-name>
+   ```
+
+3. **Fix service connectivity:**
+   ```bash
+   ./scripts/fix-service-connectivity.sh student-api
+   ```
+
+4. **Fix database issues:**
+   ```bash
+   ./scripts/verify-postgres.sh student-api
+   ```
+
+### Monitoring Setup
+
+To set up monitoring for your application:
 
 ```bash
-kubectl get deployments -n student-api
-kubectl get pods -n student-api
-kubectl logs -f deployment/student-api -n student-api
+# Deploy monitoring components
+./scripts/setup-monitoring.sh
+
+# Verify Blackbox exporter setup
+./scripts/verify-blackbox.sh
 ```
 
-### Scaling the Application
-
-Scale the number of replicas:
-
-```bash
-kubectl scale deployment student-api --replicas=5 -n student-api
-```
-
-### Cleanup
-
-To remove all deployed resources:
-
-```bash
-kubectl delete namespace student-api
-```
+Access Prometheus at: http://localhost:9090 (after port-forwarding)
+Access Grafana at: http://localhost:3000 (after port-forwarding)
 
 ## CI/CD Pipeline
 
@@ -322,8 +376,8 @@ For detailed information on testing the ArgoCD and Helm components, see [ArgoCD 
    # Install ArgoCD components
    kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
-   # Wait for all pods to be ready
-   kubectl wait --for=condition=Ready pods --all -n argocd --timeout=300s
+   # Or use our setup script
+   ./scripts/setup-argocd-declarative.sh
    ```
 
 2. **Access the ArgoCD UI:**
@@ -338,7 +392,6 @@ For detailed information on testing the ArgoCD and Helm components, see [ArgoCD 
 3. **Get the initial admin password:**
 
    ```bash
-   # For ArgoCD v1.9 and later
    kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
    ```
 
@@ -347,25 +400,17 @@ For detailed information on testing the ArgoCD and Helm components, see [ArgoCD 
 4. **Configure GitHub Repository Access:**
 
    ```bash
+   # Using our helper script
+   ./scripts/simple-repo-auth.sh
+   ```
+   
+   Or manually:
+   ```bash
    # Create a secret with your GitHub credentials
    kubectl create secret generic github-repo-creds \
      --namespace argocd \
      --from-literal=username=YOUR_GITHUB_USERNAME \
      --from-literal=password=YOUR_GITHUB_TOKEN
-
-   # Install ArgoCD CLI (optional, for command line management)
-   # MacOS
-   brew install argocd
-   # Linux
-   curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-   sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
-   rm argocd-linux-amd64
-
-   # Add the repository to ArgoCD
-   argocd login localhost:8080 --username admin --password <your-password> --insecure
-   argocd repo add https://github.com/YOUR_USERNAME/sre-bootcamp-rest-api.git \
-     --username YOUR_GITHUB_USERNAME \
-     --password YOUR_GITHUB_TOKEN
    ```
 
 5. **Deploy the Application:**
@@ -375,12 +420,39 @@ For detailed information on testing the ArgoCD and Helm components, see [ArgoCD 
    kubectl apply -f argocd/application.yaml
    ```
 
-ArgoCD is configured with:
+### Verifying ArgoCD Deployment
 
-- RBAC for access control
-- Notification system (email and Discord)
-- Application of Applications pattern
-- Automated sync policies
+To verify that ArgoCD is properly deploying your application:
+
+```bash
+# Check the application status
+kubectl get applications -n argocd
+
+# View detailed sync status
+kubectl describe application student-api -n argocd
+
+# Run our verification script
+./scripts/deployment-verify.sh
+```
+
+### Troubleshooting ArgoCD
+
+If you encounter issues with ArgoCD:
+
+1. **Reset ArgoCD configuration:**
+   ```bash
+   ./scripts/reset-argocd.sh
+   ```
+
+2. **Debug ArgoCD deployment:**
+   ```bash
+   ./scripts/debug-argocd-deploy.sh
+   ```
+
+3. **Fix repository authentication:**
+   ```bash
+   ./scripts/simple-repo-auth.sh
+   ```
 
 For more detailed ArgoCD configuration and troubleshooting, see [ArgoCD README](./argocd/README.md).
 
