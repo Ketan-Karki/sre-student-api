@@ -301,6 +301,59 @@ To set up monitoring for your application:
 Access Prometheus at: http://localhost:9090 (after port-forwarding)
 Access Grafana at: http://localhost:3000 (after port-forwarding)
 
+#### Prometheus Architecture
+
+Our monitoring implementation follows the standard Prometheus architecture:
+
+![Prometheus Architecture](https://prometheus.io/assets/architecture.png)
+
+**Components implemented:**
+
+- Prometheus Server - Scrapes and stores metrics from the Student API
+- Exporters - Including Blackbox exporter for endpoint monitoring
+- Grafana - For visualization and dashboarding
+- AlertManager - For handling and routing alerts
+
+**Key features utilized:**
+
+- Service discovery for Kubernetes pods using annotations
+- Multi-dimensional data model with proper labeling
+- Time series metrics collection via HTTP pull model
+- Dashboards for visualizing application performance
+
+**Metrics collected:**
+
+- Application uptime and availability
+- HTTP request counts, latencies, and error rates
+- Database connection metrics
+- System metrics (CPU, memory, disk usage)
+
+**How to access Prometheus UI:**
+
+```bash
+# Port forward the Prometheus server
+kubectl port-forward svc/prometheus-nodeport -n observability 9090:9090
+```
+
+**How to access Grafana dashboards:**
+
+```bash
+# Port forward the Grafana server
+kubectl port-forward svc/grafana-nodeport -n observability 3000:3000
+```
+
+Default Grafana login is admin/admin
+
+**Testing your monitoring setup:**
+
+```bash
+# Verify Prometheus is scraping targets
+./scripts/test-observability.sh
+
+# Generate test traffic
+kubectl exec -n student-api $(kubectl get pods -n student-api -l app.kubernetes.io/name=student-api -o name | head -1) -- curl -s http://localhost/api/v1/students
+```
+
 ## CI/CD Pipeline
 
 This project uses GitHub Actions for continuous integration and deployment. The pipeline automatically builds and pushes Docker images to GitHub Container Registry (GHCR) when:
