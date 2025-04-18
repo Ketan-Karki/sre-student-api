@@ -394,6 +394,27 @@ Basic queries to get you started with LogQL:
 - Filter by log level: `{namespace="student-api"} |= "ERROR"`
 - Filter by container: `{namespace="student-api", container="student-api"}`
 
+**Creating Custom Grafana Dashboards:**
+
+While a pre-configured dashboard is deployed automatically, you can create your own dashboards:
+
+1. Access the Grafana UI at http://localhost:3000 (after port forwarding)
+2. Log in with admin/admin (and change the password if prompted)
+3. Click on "+ Create" in the left sidebar and select "Dashboard"
+4. Click "Add visualization" and select your data source:
+   - Choose "Prometheus" for metrics data
+   - Choose "Loki" for log data
+5. For Prometheus metrics, try these queries:
+   - Application uptime: `up{namespace="student-api"}`
+   - HTTP request rate: `sum(rate(http_request_duration_seconds_count{namespace="student-api"}[5m])) by (path)`
+   - Request duration (p95): `histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace="student-api"}[5m])) by (le, path))`
+6. For Loki logs, try:
+   - All logs: `{namespace="student-api"}`
+   - Error logs: `{namespace="student-api"} |= "error" | json`
+7. Save your dashboard with a descriptive name
+
+For more information on building dashboards, see [Grafana Dashboard Documentation](https://grafana.com/docs/grafana/latest/dashboards/).
+
 **Testing your logging setup:**
 
 ```bash
