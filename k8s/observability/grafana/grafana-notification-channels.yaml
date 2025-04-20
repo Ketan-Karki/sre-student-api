@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-notification-channels
+  namespace: observability
+data:
+  notification-channels.yaml: |
+    apiVersion: 1
+    notifiers:
+      - name: Slack Webhook
+        type: slack
+        uid: slack-notifications
+        org_id: 1
+        is_default: true
+        settings:
+          url: "${SLACK_WEBHOOK_URL}"
+          # Add these recommended settings
+          send_reminder: true
+          disable_resolve_message: false

@@ -12,6 +12,14 @@ data:
         folder: ''
         type: file
         disableDeletion: false
-        editable: true
+        updateIntervalSeconds: 30
+        allowUiUpdates: true
         options:
           path: /var/lib/grafana/dashboards
+  alerting-provider.yaml: |
+    apiVersion: 1
+    apps:
+      - type: alerting
+        enabled: true
+        jsonData:
+          handleGrafanaManagedAlerts: true

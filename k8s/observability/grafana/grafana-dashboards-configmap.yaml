@@ -37,108 +37,80 @@ data:
       "panels": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "type": "prometheus"
           },
           "fieldConfig": {
             "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisCenteredZero": false,
-                "axisColorMode": "text",
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 10,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
               "mappings": [],
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  }
+                  { "color": "red", "value": null },
+                  { "color": "green", "value": 1 }
                 ]
-              },
-              "unit": "short"
+              }
             },
             "overrides": []
           },
           "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 0
+            "h": 8, "w": 12, "x": 0, "y": 0
           },
-          "id": 2,
+          "id": 1,
           "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom",
-              "showLegend": true
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
             },
-            "tooltip": {
-              "mode": "single",
-              "sort": "none"
-            }
+            "textMode": "auto"
           },
+          "title": "API Status",
+          "type": "stat",
           "targets": [
             {
-              "datasource": {
-                "type": "prometheus"
-              },
-              "editorMode": "code",
+              "datasource": { "type": "prometheus" },
               "expr": "up{namespace=\"student-api\"}",
-              "legendFormat": "{{pod}}",
-              "range": true,
               "refId": "A"
             }
           ],
-          "title": "Student API Status",
-          "type": "timeseries"
+          "alert": {
+            "alertRuleTags": {},
+            "conditions": [
+              {
+                "evaluator": { "params": [0.5], "type": "lt" },
+                "operator": { "type": "and" },
+                "query": { "params": ["A", "5m", "now"] },
+                "reducer": { "params": [], "type": "avg" },
+                "type": "query"
+              }
+            ],
+            "executionErrorState": "alerting",
+            "for": "5m",
+            "frequency": "1m",
+            "handler": 1,
+            "name": "API Status Down",
+            "message": "Student API service is down",
+            "noDataState": "alerting",
+            "notifications": [
+              {
+                "uid": "slack-notifications"
+              }
+            ]
+          }
         },
         {
-          "datasource": {
-            "type": "loki"
-          },
+          "datasource": { "type": "loki" },
           "gridPos": {
-            "h": 8,
-            "w": 24,
-            "x": 0,
-            "y": 8
+            "h": 9, "w": 24, "x": 0, "y": 8
           },
-          "id": 4,
+          "id": 2,
           "options": {
             "dedupStrategy": "none",
             "enableLogDetails": true,
-            "prettifyLogMessage": false,
-            "showCommonLabels": false,
             "showLabels": false,
             "showTime": false,
             "sortOrder": "Descending",
@@ -146,12 +118,7 @@ data:
           },
           "targets": [
             {
-              "datasource": {
-                "type": "loki"
-              },
-              "editorMode": "code",
               "expr": "{namespace=\"student-api\"}",
-              "queryType": "range",
               "refId": "A"
             }
           ],
@@ -159,23 +126,15 @@ data:
           "type": "logs"
         }
       ],
+      "refresh": "10s",
       "schemaVersion": 38,
       "style": "dark",
-      "tags": [
-        "student-api",
-        "kubernetes"
-      ],
-      "templating": {
-        "list": []
-      },
+      "tags": ["student-api"],
       "time": {
-        "from": "now-15m",
+        "from": "now-1h",
         "to": "now"
       },
-      "timepicker": {},
-      "timezone": "",
       "title": "Student API Dashboard",
-      "version": 1,
-      "uid": "student-api",
-      "weekStart": ""
+      "uid": "student-api-dashboard",
+      "version": 1
     }

@@ -28,14 +28,45 @@ spec:
               value: admin
             - name: GF_PATHS_PROVISIONING
               value: /etc/grafana/provisioning
+            - name: SLACK_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: slack-webhook-secret
+                  key: webhook-url
           volumeMounts:
-            - name: grafana-datasources
-              mountPath: /etc/grafana/provisioning/datasources
             - name: grafana-storage
               mountPath: /var/lib/grafana
+            - name: slack-webhook-secret
+              mountPath: /etc/secrets/slack
+              readOnly: true
+            - name: grafana-dashboards
+              mountPath: /var/lib/grafana/dashboards
+            - name: grafana-dashboard-providers
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: grafana-notification-channels
+              mountPath: /etc/grafana/provisioning/notifiers
+            - name: grafana-alerting-config
+              mountPath: /etc/grafana/provisioning/alerting
+            - name: grafana-datasources
+              mountPath: /etc/grafana/provisioning/datasources
       volumes:
+        - name: grafana-storage
+          emptyDir: {}
+        - name: slack-webhook-secret
+          secret:
+            secretName: slack-webhook-url
+        - name: grafana-dashboards
+          configMap:
+            name: grafana-dashboards
+        - name: grafana-dashboard-providers
+          configMap:
+            name: grafana-dashboard-providers
+        - name: grafana-notification-channels
+          configMap:
+            name: grafana-notification-channels
+        - name: grafana-alerting-config
+          configMap:
+            name: grafana-alerting-config
         - name: grafana-datasources
           configMap:
             name: grafana-datasources
-        - name: grafana-storage
-          emptyDir: {}

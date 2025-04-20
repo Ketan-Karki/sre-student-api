@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-alert-rules
+  namespace: observability
+data:
+  student-api-alerts.yaml: |
+    groups:
+      - name: student-api
+        rules:
+        - alert: StudentAPIDown
+          expr: up{namespace="student-api"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            team: sre
+          annotations:
+            summary: "Student API service is down"
+            description: "Student API service has been down for more than 2 minutes."
+            
+        - alert: HighResponseTime
+          expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace="student-api"}[5m])) by (le, path)) > 1
+          for: 2m
+          labels:
+            severity: warning
+            team: sre
+          annotations:
+            summary: "High API response time"
+            description: "Student API p95 response time is above 1 second for {{ $labels.path }}"
+            
+        - alert: HighErrorRate
+          expr: sum(rate(http_server_errors_total[5m])) / sum(rate(http_requests_total[5m])) > 0.05
+          for: 2m
+          labels:
+            severity: warning
+            team: sre
+          annotations:
+            summary: "High HTTP error rate"
+            description: "Student API error rate is above 5%"
+            
+        - alert: DatabaseConnectionIssues
+          expr: pg_stat_database_numbackends{datname="api"} < 1
+          for: 2m
+          labels:
+            severity: critical
+            team: sre
+          annotations:
+            summary: "Database connection issues"
+            description: "The API database appears to have connection issues"
+            
+        - alert: HighMemoryUsage
+          expr: (sum(container_memory_usage_bytes{namespace="student-api"}) / sum(container_memory_max_usage_bytes{namespace="student-api"})) * 100 > 80
+          for: 5m
+          labels:
+            severity: warning
+            team: sre
+          annotations:
+            summary: "High memory usage"
+            description: "Student API memory usage is above 80%"
