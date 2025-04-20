@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-metrics
+  namespace: student-api
+  labels:
+    app: test-metrics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-metrics
+  template:
+    metadata:
+      labels:
+        app: test-metrics
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+        - name: prometheus-demo
+          image: prom/prometheus:v2.35.0
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+            - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+            - "--web.console.templates=/usr/share/prometheus/consoles"
+            - "--web.enable-lifecycle"
+          ports:
+            - containerPort: 9090
+              name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-metrics
+  namespace: student-api
+  labels:
+    app: test-metrics
+spec:
+  ports:
+    - port: 9090
+      targetPort: 9090
+      name: http
+  selector:
+    app: test-metrics

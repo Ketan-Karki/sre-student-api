@@ -145,3 +145,81 @@ kubectl run test-connectivity -n $NAMESPACE --image=curlimages/curl --restart=Ne
 
 echo -e "\n=== Student API Fix Complete ==="
 echo "Now update the Blackbox Exporter configuration to monitor these services."
+
+#!/bin/bash
+
+echo "=== Diagnosing Student API issues ==="
+
+# Check init container logs
+INIT_POD=$(kubectl get pods -n student-api -l app.kubernetes.io/name=student-api -o name | head -1)
+echo "Checking init container logs for $INIT_POD..."
+kubectl logs $INIT_POD -n student-api -c init-container 2>/dev/null || echo "No init container logs available"
+
+# Check events
+echo -e "\n=== Events for student-api namespace ==="
+kubectl get events -n student-api --sort-by='.lastTimestamp'
+
+# Fix potential issues
+echo -e "\n=== Attempting to fix Student API deployment ==="
+
+# Create a fast-starting test deployment
+cat << EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metrics-demo
+  namespace: student-api
+  labels:
+    app: metrics-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metrics-demo
+  template:
+    metadata:
+      labels:
+        app: metrics-demo
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+      - name: metrics
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        command:
+        - sh
+        - -c
+        - |
+          echo '<html><body><h1>Metrics Test</h1></body></html>' > /usr/share/nginx/html/index.html
+          nginx -g 'daemon off;'
+EOF
+
+# Create a ClusterIP service for the metrics demo
+kubectl apply -f - << EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: metrics-demo
+  namespace: student-api
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: metrics-demo
+EOF
+
+echo -e "\n=== Waiting for metrics-demo to be ready ==="
+kubectl wait --for=condition=available --timeout=60s deployment/metrics-demo -n student-api
+
+echo -e "\n=== Updating Grafana Alert Rules ==="
+echo "Now modify your alert rules in Grafana UI to use:"
+echo "- For testing: vector(1)"
+echo "- For uptime: up{namespace=\"student-api\", job=\"kubernetes-pods\"}"
+
+echo -e "\n=== Student API Pod Status ==="
+kubectl get pods -n student-api
