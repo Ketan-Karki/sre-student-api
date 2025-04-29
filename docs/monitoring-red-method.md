@@ -8,54 +8,65 @@ The Student API implements monitoring following the RED Method (Rate, Errors, Du
 
 ### Rate (Requests per Second)
 
-We track request rates through several metrics:
+We track request rates using standardized metrics:
 
 ```promql
 # Overall request rate
-sum(rate(http_request_duration_seconds_count{namespace="student-api"}[5m]))
+sum(rate(student_api_requests_rate_total{namespace="student-api"}[5m]))
 
-# Request rate by endpoint
-sum(rate(student_api_requests_total{path="/api/students"}[5m]))
-sum(rate(student_api_requests_total{path="/api/courses"}[5m]))
+# Request rate by endpoint and method
+sum(rate(student_api_requests_rate_total{namespace="student-api"}[5m])) by (path, method)
+
+# Traffic pattern analysis
+topk(5, sum(rate(student_api_requests_rate_total{namespace="student-api"}[5m])) by (path))
 ```
 
 **Alert Rules**:
 
-- High traffic alert when request rate exceeds normal baseline
-- Low traffic alert for unexpected drops in request rate
+- HighTrafficRate: Triggers when request rate exceeds 1000 req/s
+- LowTrafficRate: Triggers when request rate drops below baseline
 
 ### Errors (Failed Requests)
 
-Error tracking focuses on both system and application-level errors:
+Error tracking uses consistent error-specific metrics:
 
 ```promql
 # Error rate as percentage
-sum(rate(http_server_errors_total[5m])) / sum(rate(http_requests_total[5m]))
+sum(rate(student_api_errors_total{namespace="student-api"}[5m])) / sum(rate(student_api_requests_rate_total{namespace="student-api"}[5m]))
 
-# Absolute error count
-sum(student_api_errors_total)
+# Error breakdown by type
+sum(student_api_errors_total) by (error_type, path)
+
+# Failed requests by status code
+sum(rate(student_api_errors_total{namespace="student-api"}[5m])) by (status_code)
 ```
 
 **Alert Rules**:
 
-- HighErrorRate: Triggers when error rate exceeds 5% over 2 minutes
-- DatabaseConnectionIssues: Triggers when database connectivity drops
+- HighErrorRate: Triggers when error rate exceeds 5%
+- ErrorSpike: Triggers on sudden increase in error rate
+- DatabaseErrors: Triggers on persistent database errors
 
 ### Duration (Request Latency)
 
-Latency monitoring covers various percentiles:
+Latency monitoring uses consistent duration metrics:
 
 ```promql
 # 95th percentile latency by endpoint
-histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace="student-api"}[5m])) by (le, path))
+histogram_quantile(0.95, sum(rate(student_api_duration_seconds_bucket{namespace="student-api"}[5m])) by (le, path))
 
-# Average response time
-sum(rate(student_api_response_time_seconds_sum[5m])) / sum(rate(student_api_response_time_seconds_count[5m]))
+# Average response time by endpoint
+sum(rate(student_api_duration_seconds_sum{namespace="student-api"}[5m])) by (path) / sum(rate(student_api_duration_seconds_count{namespace="student-api"}[5m])) by (path)
+
+# Latency breakdown by path and method
+histogram_quantile(0.99, sum(rate(student_api_duration_seconds_bucket{namespace="student-api"}[5m])) by (le, path, method))
 ```
 
 **Alert Rules**:
 
-- HighLatency: Triggers when p95 latency exceeds 1 second
+- HighLatency: Triggers when p95 latency exceeds 1s
+- LatencySpike: Triggers on sudden latency increases
+- EndpointSlowdown: Triggers when specific endpoints slow down
 
 ## Monitoring Stack Components
 
