@@ -73,20 +73,35 @@ histogram_quantile(0.99, sum(rate(student_api_duration_seconds_bucket{namespace=
 ### Metrics Collection
 
 - Prometheus server scrapes metrics every 30s
-- Metric endpoints exposed on `/metrics`
-- Service discovery via pod annotations
+- All metrics follow standard label patterns:
+  - `namespace`: Service namespace (e.g., "student-api")
+  - `service`: Service name (e.g., "api", "postgres", "nginx")
+  - `endpoint`: API endpoint path (e.g., "/api/v1/students")
+  - `method`: HTTP method (e.g., "GET", "POST")
+  - `status_code`: HTTP response code
+  - `version`: Service version/tag
 
 ### Visualization
 
-- Grafana dashboards with RED Method panels
-- Pre-configured alerts based on RED thresholds
-- Custom dashboards for deeper analysis
+- Unified Grafana dashboards with consistent labels
+- Metric grouping by service, endpoint, and status
+- Label-based filtering and aggregation
+- Custom dashboards leveraging standardized labels
 
 ### Alerting
 
-- Alert rules defined in `grafana-alert-rules.yaml`
-- Notifications via multiple channels (email, Discord)
-- Alert grouping by severity and team
+- Alert rules use consistent label matching:
+
+```yaml
+labels:
+  severity: [critical|warning|info]
+  service: [api|postgres|nginx]
+  team: [sre|dev|ops]
+  environment: [prod|dev|staging]
+```
+
+- Notifications routed based on severity and team labels
+- Alert grouping using service and environment labels
 
 ## Access and Usage
 
