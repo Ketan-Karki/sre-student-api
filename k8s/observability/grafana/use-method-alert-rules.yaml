@@ -1,0 +1,161 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: use-method-alert-rules
+  namespace: observability
+  labels:
+    grafana_rule: "1"
+data:
+  use-method-alert-rules.yaml: |
+    groups:
+    - name: USE-Method-CPU
+      rules:
+      - alert: HighCPUUtilization
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+          resource: cpu
+          metric_type: utilization
+          team: sre
+        annotations:
+          summary: "High CPU utilization"
+          description: "CPU utilization on {{ $labels.instance }} has been above 85% for more than 5 minutes."
+
+      - alert: HighCPUSaturation
+        expr: node_load5 > count by (instance) (node_cpu_seconds_total{mode="idle"}) * 0.8
+        for: 5m
+        labels:
+          severity: warning
+          resource: cpu
+          metric_type: saturation
+          team: sre
+        annotations:
+          summary: "High CPU saturation"
+          description: "CPU run queue is saturated on {{ $labels.instance }}."
+
+      - alert: CPUThrottlingDetected
+        expr: rate(node_cpu_core_throttles_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          resource: cpu
+          metric_type: error
+          team: sre
+        annotations:
+          summary: "CPU throttling detected"
+          description: "CPU throttling events detected on {{ $labels.instance }}."
+
+    - name: USE-Method-Memory
+      rules:
+      - alert: HighMemoryUtilization
+        expr: 100 * (1 - ((node_memory_MemFree_bytes + node_memory_Cached_bytes + node_memory_Buffers_bytes) / node_memory_MemTotal_bytes)) > 90
+        for: 5m
+        labels:
+          severity: warning
+          resource: memory
+          metric_type: utilization
+          team: sre
+        annotations:
+          summary: "High memory utilization"
+          description: "Memory utilization on {{ $labels.instance }} has been above 90% for more than 5 minutes."
+
+      - alert: HighMemorySaturation
+        expr: rate(node_vmstat_pgpgin[5m]) + rate(node_vmstat_pgpgout[5m]) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          resource: memory
+          metric_type: saturation
+          team: sre
+        annotations:
+          summary: "High memory saturation (paging activity)"
+          description: "High paging activity detected on {{ $labels.instance }}."
+
+      - alert: OOMKillDetected
+        expr: rate(node_vmstat_oom_kill[5m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          resource: memory
+          metric_type: error
+          team: sre
+        annotations:
+          summary: "OOM kill events detected"
+          description: "OOM kill events detected on {{ $labels.instance }}."
+
+    - name: USE-Method-Disk
+      rules:
+      - alert: HighDiskUtilization
+        expr: rate(node_disk_io_time_seconds_total[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          resource: disk
+          metric_type: utilization
+          team: sre
+        annotations:
+          summary: "High disk utilization"
+          description: "Disk utilization on {{ $labels.instance }} device {{ $labels.device }} has been above 80% for more than 5 minutes."
+
+      - alert: HighDiskSaturation
+        expr: rate(node_disk_io_time_weighted_seconds_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          resource: disk
+          metric_type: saturation
+          team: sre
+        annotations:
+          summary: "High disk saturation"
+          description: "Disk I/O is saturated on {{ $labels.instance }} device {{ $labels.device }}."
+
+      - alert: DiskErrorsDetected
+        expr: rate(node_disk_errors_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          resource: disk
+          metric_type: error
+          team: sre
+        annotations:
+          summary: "Disk errors detected"
+          description: "Disk errors detected on {{ $labels.instance }} device {{ $labels.device }}."
+
+    - name: USE-Method-Network
+      rules:
+      - alert: HighNetworkUtilization
+        expr: rate(node_network_transmit_bytes_total[5m]) * 8 > node_network_speed_bytes * 0.8
+        for: 5m
+        labels:
+          severity: warning
+          resource: network
+          metric_type: utilization
+          team: sre
+        annotations:
+          summary: "High network utilization"
+          description: "Network utilization on {{ $labels.instance }} interface {{ $labels.device }} has been above 80% for more than 5 minutes."
+
+      - alert: NetworkPacketDrops
+        expr: rate(node_network_receive_drop_total[5m]) + rate(node_network_transmit_drop_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          resource: network
+          metric_type: saturation
+          team: sre
+        annotations:
+          summary: "Network packet drops detected"
+          description: "Network packet drops detected on {{ $labels.instance }} interface {{ $labels.device }}."
+
+      - alert: NetworkInterfaceErrors
+        expr: rate(node_network_transmit_errs_total[5m]) + rate(node_network_receive_errs_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          resource: network
+          metric_type: error
+          team: sre
+        annotations:
+          summary: "Network interface errors detected"
+          description: "Network errors detected on {{ $labels.instance }} interface {{ $labels.device }}."

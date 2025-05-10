@@ -52,3 +52,55 @@ data:
           - source_labels: [__meta_kubernetes_pod_name]
             action: replace
             target_label: kubernetes_pod_name
+            
+      # USE Method - Node Exporter for host-level metrics
+      - job_name: 'node-exporter'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - observability
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_label_app]
+            regex: node-exporter
+            action: keep
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            regex: metrics
+            action: keep
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: kubernetes_service_name
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: kubernetes_node
+
+      - job_name: node-exporter-static
+        static_configs:
+        - targets: ['192.168.67.2:9100']
+          labels:
+            instance: node-exporter
+
+      - job_name: kube-state-metrics-static
+        static_configs:
+        - targets: ['10.244.0.156:8080']
+          labels:
+            instance: kube-state-metrics
+
+      # USE Method - Kube State Metrics for Kubernetes resource metrics
+      - job_name: 'kube-state-metrics'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - observability
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_label_app]
+            regex: kube-state-metrics
+            action: keep
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            regex: metrics
+            action: keep
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: kubernetes_service_name
