@@ -1,16 +1,18 @@
 # Student API
 
-## SRE Bootcamp - CI/CD and GitOps Implementation
+## SRE Bootcamp - CI/CD, GitOps, and Monitoring Implementation
 
-This repository contains a Student API application with complete CI/CD pipeline and GitOps implementation using ArgoCD.
+This repository contains a Student API application with complete CI/CD pipeline, GitOps implementation using ArgoCD, and comprehensive monitoring using both RED and USE Methods.
 
 ## Application Components
 
-- REST API for managing student records
+- REST API for managing student records built with Go and Gin framework
 - PostgreSQL database for persistent storage
-- Kubernetes deployment configurations
-- Helm charts for deployment
-- ArgoCD configuration for GitOps
+- Kubernetes deployment configurations with resource management
+- Helm charts for deployment across multiple environments
+- ArgoCD configuration for GitOps-based continuous deployment
+- Comprehensive monitoring using both RED and USE Methods
+- CI/CD pipeline with GitHub Actions
 
 ## Purpose of the Repository
 
@@ -301,7 +303,7 @@ To set up monitoring for your application:
 Access Prometheus at: http://localhost:9090 (after port-forwarding)
 Access Grafana at: http://localhost:3000 (after port-forwarding)
 
-#### Prometheus Architecture
+#### Monitoring Architecture
 
 Our monitoring implementation follows the standard Prometheus architecture:
 
@@ -310,9 +312,11 @@ Our monitoring implementation follows the standard Prometheus architecture:
 **Components implemented:**
 
 - Prometheus Server - Scrapes and stores metrics from the Student API
-- Exporters - Including Blackbox exporter for endpoint monitoring
+- Exporters - Including Blackbox exporter for endpoint monitoring, Node Exporter, and Kube-State-Metrics
 - Grafana - For visualization and dashboarding
 - AlertManager - For handling and routing alerts
+- Loki - For log aggregation and querying
+- Promtail - For log collection
 
 **Key features utilized:**
 
@@ -320,13 +324,33 @@ Our monitoring implementation follows the standard Prometheus architecture:
 - Multi-dimensional data model with proper labeling
 - Time series metrics collection via HTTP pull model
 - Dashboards for visualizing application performance
+- Dual monitoring methodologies: RED and USE
+
+**Monitoring Methodologies:**
+
+1. **RED Method (Service-Centric):**
+   - Rate - Requests per second
+   - Errors - Failed requests
+   - Duration - Request latency
+
+2. **USE Method (Resource-Centric):**
+   - Utilization - Percentage of time the resource is busy
+   - Saturation - Degree to which a resource has extra work it can't service
+   - Errors - Count of error events or failures
 
 **Metrics collected:**
 
-- Application uptime and availability
-- HTTP request counts, latencies, and error rates
-- Database connection metrics
-- System metrics (CPU, memory, disk usage)
+- Application metrics (RED Method):
+  - HTTP request rates, latencies, and error rates
+  - Database connection metrics
+  - Endpoint-specific performance metrics
+
+- Resource metrics (USE Method):
+  - CPU utilization, saturation, and errors
+  - Memory utilization, saturation, and errors
+  - Network interface utilization, saturation, and errors
+  - Storage device utilization, saturation, and errors
+  - Container resource utilization and saturation
 
 **How to access Prometheus UI:**
 
@@ -352,6 +376,56 @@ Default Grafana login is admin/admin
 
 # Generate test traffic
 kubectl exec -n student-api $(kubectl get pods -n student-api -l app.kubernetes.io/name=student-api -o name | head -1) -- curl -s http://localhost/api/v1/students
+
+# Test USE Method metrics collection
+./scripts/verify-node-exporter.sh
+./scripts/verify-kube-state-metrics.sh
+```
+
+#### Monitoring Troubleshooting Guide
+
+This section covers troubleshooting for both RED Method (service-centric) and USE Method (resource-centric) monitoring issues.
+
+**Service Performance Issues (RED Method)**
+
+```bash
+# Verify metrics endpoint is accessible
+kubectl port-forward svc/student-api -n student-api 8080:8080
+curl http://localhost:8080/metrics
+
+# Check recent error logs
+kubectl logs -n student-api -l app=student-api --tail=100
+
+# Check database connection metrics
+kubectl port-forward -n student-api pod/<postgres-pod> 9187:9187
+curl http://localhost:9187/metrics | grep pg_stat_activity
+```
+
+**Resource Issues (USE Method)**
+
+```bash
+# Check Node Exporter metrics
+kubectl port-forward -n observability svc/prometheus-node-exporter 9100:9100
+curl http://localhost:9100/metrics
+
+# Check Kube State Metrics
+kubectl port-forward -n observability svc/kube-state-metrics 8080:8080
+curl http://localhost:8080/metrics
+
+# Diagnose high CPU/Memory usage
+kubectl top nodes
+kubectl top pods -n student-api
+```
+
+**Alert Troubleshooting**
+
+```bash
+# Check AlertManager configuration
+kubectl get configmap -n observability prometheus-alertmanager -o yaml
+
+# Check active alerts
+kubectl port-forward -n observability svc/alertmanager 9093:9093
+curl -s http://localhost:9093/api/v1/alerts | jq
 ```
 
 #### Logging with Loki
@@ -394,9 +468,23 @@ Basic queries to get you started with LogQL:
 - Filter by log level: `{namespace="student-api"} |= "ERROR"`
 - Filter by container: `{namespace="student-api", container="student-api"}`
 
-**Creating Custom Grafana Dashboards:**
+**Available Grafana Dashboards:**
 
-While a pre-configured dashboard is deployed automatically, you can create your own dashboards:
+The following pre-configured dashboards are available:
+
+1. **RED Method Dashboard**
+   - Service-centric view of the API performance
+   - Panels for request rates, error rates, and latency
+   - Breakdowns by endpoint and error type
+
+2. **USE Method Dashboard**
+   - Resource-centric view of system components
+   - CPU, Memory, Network, and Disk metrics
+   - Utilization, Saturation, and Error metrics for each resource
+
+**Creating Custom Dashboards:**
+
+You can also create your own custom dashboards:
 
 1. Access the Grafana UI at http://localhost:3000 (after port forwarding)
 2. Log in with admin/admin (and change the password if prompted)
@@ -404,36 +492,56 @@ While a pre-configured dashboard is deployed automatically, you can create your 
 4. Click "Add visualization" and select your data source:
    - Choose "Prometheus" for metrics data
    - Choose "Loki" for log data
-5. For Prometheus metrics, try these queries:
+
+5. For RED Method metrics, try these queries:
    - Application uptime: `up{namespace="student-api"}`
    - HTTP request rate: `sum(rate(http_request_duration_seconds_count{namespace="student-api"}[5m])) by (path)`
    - Request duration (p95): `histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace="student-api"}[5m])) by (le, path))`
-6. For Loki logs, try:
+
+6. For USE Method metrics, try these queries:
+   - CPU utilization: `100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)`
+   - Memory saturation: `node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100`
+   - Disk utilization: `rate(node_disk_io_time_seconds_total[5m]) * 100`
+   - Network errors: `rate(node_network_transmit_errs_total[5m]) + rate(node_network_receive_errs_total[5m])`
+
+7. For Loki logs, try:
    - All logs: `{namespace="student-api"}`
    - Error logs: `{namespace="student-api"} |= "error" | json`
-7. Save your dashboard with a descriptive name
+
+8. Save your dashboard with a descriptive name
 
 For more information on building dashboards, see [Grafana Dashboard Documentation](https://grafana.com/docs/grafana/latest/dashboards/).
 
 **Testing your logging setup:**
 
-```bash
-# Verify Loki is collecting logs
-./scripts/test-observability.sh
-
-# Generate some log entries
-kubectl exec -n student-api $(kubectl get pods -n student-api -l app.kubernetes.io/name=student-api -o name | head -1) -- curl -s http://localhost/api/v1/students
-```
-
-For more information on using Loki, see [Grafana Loki Documentation](https://grafana.com/docs/loki/latest/).
-
 ## CI/CD Pipeline
 
-This project uses GitHub Actions for continuous integration and deployment. The pipeline automatically builds and pushes Docker images to GitHub Container Registry (GHCR) when:
+This project uses GitHub Actions for continuous integration and deployment. The pipeline automatically builds and pushes Docker images to both GitHub Container Registry (GHCR) and Docker Hub when:
 
-- Changes are pushed to main/master branch
+- Changes are pushed to main/master branch (for specific file paths)
 - A new tag is created (v\*)
 - A pull request is opened against main/master branch
+- Weekly on Mondays (scheduled builds)
+- Manual workflow dispatch
+
+### CI/CD Workflow
+
+1. **Build and Test:**
+   - Checkout code
+   - Set up Go environment
+   - Build the application
+   - Run tests
+   - Run linting with golangci-lint
+
+2. **Docker Image Build and Push:**
+   - Build multi-architecture Docker images
+   - Push to both GHCR and Docker Hub
+   - Apply appropriate tags
+
+3. **Helm Values Update:**
+   - Automatic update of Helm chart values.yaml files
+   - Different environments (dev/prod) are updated based on the trigger type
+   - Changes are committed back to the repository
 
 ### Docker Image Tags
 
@@ -443,15 +551,17 @@ The pipeline generates several types of tags for the Docker image:
 - Git commit SHA
 - Semantic version tags when a version tag is pushed (e.g., `v1.0.0`, `v1.0`, `v1`)
 
-### Accessing the Docker Image
+### Accessing the Docker Images
 
-To pull the Docker image from GHCR:
-
+**From GitHub Container Registry:**
 ```bash
-docker pull ghcr.io/OWNER/REPO_NAME:tag
+docker pull ghcr.io/ketan-karki/student-api:tag
 ```
 
-Replace `OWNER/REPO_NAME` with your GitHub username and repository name.
+**From Docker Hub:**
+```bash
+docker pull ketankarki/student-api:tag
+```
 
 ## Testing the Application
 
@@ -614,14 +724,32 @@ export EMAIL_PASSWORD="your-password-here"
 ## Directory Structure
 
 - `/argocd`: ArgoCD configuration files
+- `/docs`: Documentation including monitoring implementation guides
 - `/helm-charts`: Helm charts for deployment
+   - `/observability`: Charts for Prometheus, Grafana, Loki, and other monitoring tools
+   - `/student-api-helm`: Main application Helm chart
 - `/k8s`: Kubernetes manifests
+- `/middleware`: Application middleware
+- `/models`: Database models
+- `/routes`: API routes
 - `/scripts`: Testing and utility scripts
-- `/src`: Application source code
+- `/migrations`: Database migration files
+- `/test`: Test files
 
 ### Contribution Guidelines
 
 I welcome contributions to enhance the Student API. Please fork the repository and submit a pull request with your changes. Ensure your code adheres to the project's coding standards and includes appropriate tests.
+
+## References
+
+- [RED Method by Tom Wilkie](https://grafana.com/blog/2018/08/02/the-red-method-how-to-instrument-your-services/) - Service-centric monitoring methodology
+- [USE Method by Brendan Gregg](https://www.brendangregg.com/usemethod.html) - Resource-centric monitoring methodology
+- [Prometheus Documentation](https://prometheus.io/docs/introduction/overview/) - Time series database for metrics
+- [Grafana Documentation](https://grafana.com/docs/) - Visualization and dashboarding
+- [Loki Documentation](https://grafana.com/docs/loki/latest/) - Log aggregation system
+- [Node Exporter Documentation](https://github.com/prometheus/node_exporter) - System metrics exporter
+- [Kube State Metrics](https://github.com/kubernetes/kube-state-metrics) - Kubernetes object metrics
+- [ArgoCD Documentation](https://argo-cd.readthedocs.io/) - GitOps continuous delivery
 
 ## License
 
