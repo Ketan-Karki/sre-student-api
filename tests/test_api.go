@@ -1,3 +1,6 @@
+//go:build test_api
+// +build test_api
+
 package test_api
 
 import (

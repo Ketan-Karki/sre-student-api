@@ -81,7 +81,9 @@ func (u *User) Save() error {
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			if rbErr := tx.Rollback(); rbErr != nil {
+				log.Printf("Error rolling back transaction: %v", rbErr)
+			}
 		}
 	}()
 
@@ -148,7 +150,9 @@ func (u *User) Update() error {
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			if rbErr := tx.Rollback(); rbErr != nil {
+				log.Printf("Error rolling back transaction: %v", rbErr)
+			}
 		}
 	}()
 
@@ -246,7 +250,9 @@ func (u *User) Delete() error {
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			if rbErr := tx.Rollback(); rbErr != nil {
+				log.Printf("Error rolling back transaction: %v", rbErr)
+			}
 		}
 	}()
 
