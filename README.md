@@ -2,11 +2,12 @@
 
 ## SRE Bootcamp - CI/CD, GitOps, and Monitoring Implementation
 
-This repository contains a Student API application with complete CI/CD pipeline, GitOps implementation using ArgoCD, and comprehensive monitoring using both RED and USE Methods.
+This repository contains a comprehensive Student Management System API with complete CI/CD pipeline, GitOps implementation using ArgoCD, and comprehensive monitoring using both RED and USE Methods.
 
 ## Application Components
 
-- REST API for managing student records built with Go and Gin framework
+- REST API for a complete Student Management System built with Go and Gin framework
+- Role-Based Access Control (RBAC) for secure access
 - PostgreSQL database for persistent storage
 - Kubernetes deployment configurations with resource management
 - Helm charts for deployment across multiple environments
@@ -16,7 +17,77 @@ This repository contains a Student API application with complete CI/CD pipeline,
 
 ## Purpose of the Repository
 
-This repository contains the source code for the Student API, a RESTful API designed to manage student records. The API is built using Go and the Gin framework, providing a robust and scalable solution for student data management.
+This repository contains the source code for the Student Management System API, a RESTful API designed to manage student records, attendance, grades, assignments, and parent-teacher communication. The API is built using Go and the Gin framework, providing a robust and scalable solution for school management services. The system implements role-based access control to ensure appropriate permissions for faculty, staff, and parents.
+
+## API Endpoints
+
+The Student Management System API provides the following endpoints:
+
+### Authentication
+
+- `POST /api/v1/auth/register` - Register a new user
+- `POST /api/v1/auth/login` - Authenticate and receive a token
+
+### Students
+
+- `GET /api/v1/students` - Get all students (faculty, staff, parents)
+- `GET /api/v1/students/:id` - Get student by ID (faculty, staff, parents)
+- `POST /api/v1/students` - Create a new student (faculty, staff only)
+- `PUT /api/v1/students/:id` - Update student information (faculty, staff only)
+- `DELETE /api/v1/students/:id` - Delete a student (faculty, staff only)
+
+### Users
+
+- `GET /api/v1/users` - Get all users (faculty, staff only)
+- `GET /api/v1/users/:id` - Get user by ID (faculty, staff only)
+- `PUT /api/v1/users/:id` - Update user information (faculty, staff only)
+- `DELETE /api/v1/users/:id` - Delete a user (staff only)
+
+### Attendance
+
+- `POST /api/v1/attendance` - Record attendance (faculty, staff only)
+- `GET /api/v1/attendance/:id` - Get attendance record by ID (faculty, staff only)
+- `PUT /api/v1/attendance/:id` - Update attendance record (faculty, staff only)
+- `GET /api/v1/attendance/student/:studentId` - Get all attendance records for a student (faculty, staff only)
+- `GET /api/v1/attendance/date-range` - Get attendance records within a date range (faculty, staff only)
+
+### Assignments
+
+- `GET /api/v1/assignments` - Get all assignments (faculty, staff, parents)
+- `GET /api/v1/assignments/:id` - Get assignment by ID (faculty, staff, parents)
+- `POST /api/v1/assignments` - Create a new assignment (faculty only)
+- `PUT /api/v1/assignments/:id` - Update assignment information (faculty only)
+- `DELETE /api/v1/assignments/:id` - Delete an assignment (faculty only)
+
+### Grades
+
+- `GET /api/v1/grades/:id` - Get grade by ID (faculty, staff, parents)
+- `POST /api/v1/grades` - Create a grade for an assignment (faculty only)
+- `PUT /api/v1/grades/:id` - Update a grade (faculty only)
+- `GET /api/v1/grades/student/:studentId` - Get all grades for a student (faculty, staff, parents)
+- `GET /api/v1/grades/assignment/:assignmentId` - Get all grades for an assignment (faculty only)
+
+### Parent-Teacher Communication
+
+- `POST /api/v1/forum/posts` - Create a new forum post (faculty, staff, parents)
+- `GET /api/v1/forum/posts/:id` - Get forum post by ID with its comments (faculty, staff, parents)
+- `PUT /api/v1/forum/posts/:id` - Update a forum post (post author only)
+- `DELETE /api/v1/forum/posts/:id` - Delete a forum post (post author, staff, or faculty)
+- `GET /api/v1/forum/posts/student/:studentId` - Get all forum posts for a student (faculty, staff, parents)
+- `POST /api/v1/forum/comments` - Create a comment on a forum post (faculty, staff, parents)
+- `PUT /api/v1/forum/comments/:id` - Update a comment (comment author only)
+- `GET /api/v1/forum/posts/:postId/comments` - Get all comments for a forum post (faculty, staff, parents)
+
+### Reports
+
+- `GET /api/v1/reports/attendance` - Generate attendance report (faculty, staff only)
+- `GET /api/v1/reports/grades` - Generate grades report (faculty, staff only)
+- `GET /api/v1/reports/student/:studentId` - Generate comprehensive student activity report (faculty, staff only)
+- `GET /api/v1/reports/student/:studentId/parent` - Generate student activity report for parents (parent access only)
+
+### System
+
+- `GET /api/v1/healthcheck` - Check system health (public endpoint)
 
 ## Local Setup Instructions
 

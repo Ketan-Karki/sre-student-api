@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"example.com/sre-bootcamp-rest-api/db"
-	"example.com/sre-bootcamp-rest-api/middleware"
 	"example.com/sre-bootcamp-rest-api/routes"
 	"github.com/gin-gonic/gin"
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -22,11 +22,20 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
-	server := gin.Default()
+	// Set up Gin
+	r := gin.Default()
 
-	server.Use(middleware.CacheMiddleware(time.Minute))
+	// Basic health check endpoint
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status": "ok",
+			"time":   time.Now().Format(time.RFC3339),
+		})
+	})
 
-	routes.RegisterRoutes(server)
+	// Register API routes
+	apiV1 := r.Group("/api/v1")
+	routes.RegisterRoutes(apiV1)
 
 	// Get port from environment variable, default to 8080
 	port := os.Getenv("PORT")
@@ -34,12 +43,15 @@ func main() {
 		port = "8080"
 	}
 
+	// Create a server with graceful shutdown
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),
-		Handler: server,
+		Handler: r,
 	}
 
+	// Start the server in a goroutine
 	go func() {
+		log.Printf("Starting server on port %s", port)
 		log.Printf("Server starting on port %s", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server error: %v", err)
