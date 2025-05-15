@@ -1,0 +1,12 @@
+POST http://localhost:8080/api/v1/assignments
+Content-Type: application/json
+Authorization: Bearer 4f41465f-4689-4d10-85b4-b7818572ee22
+
+{
+    "title": "Test Assignment",
+    "description": "This is a test assignment",
+    "due_date": "2025-06-01T12:00:00Z",
+    "max_points": 100,
+    "subject": "Mathematics",
+    "created_by": "4f41465f-4689-4d10-85b4-b7818572ee22"
+}

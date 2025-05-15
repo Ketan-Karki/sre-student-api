@@ -1,0 +1,13 @@
+PUT http://localhost:8080/api/v1/grades/750a5fae-5576-4c84-975d-9709345a8d3b
+Content-Type: application/json
+Authorization: Bearer 4f41465f-4689-4d10-85b4-b7818572ee22
+
+{
+    "score": 90,
+    "feedback": "Excellent improvement after revision.",
+    "student_id": "b5033852-f11a-40c4-a5b1-0268f45a7c62",
+    "assignment_id": "02280acb-de60-4269-a6f4-eb6812bd9345",
+    "max_score": 100,
+    "status": "completed",
+    "graded_by": "4f41465f-4689-4d10-85b4-b7818572ee22"
+}

@@ -1,8 +1,9 @@
-PUT http://localhost:8080/api/v1/students/0e4f9a2b-9041-450f-bc21-e33c496d0687
+PUT http://localhost:8080/api/v1/students/fa0ea95e-731f-4cec-9b9a-836d9a47ec85
 Content-Type: application/json
+Authorization: Bearer 4f41465f-4689-4d10-85b4-b7818572ee22
 
 {
     "name": "Cristiano Ronaldo",
     "age": 36,
-    "grade": 12
+    "grade": "12"
 }

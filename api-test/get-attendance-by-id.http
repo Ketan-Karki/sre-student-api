@@ -1,0 +1,2 @@
+GET http://localhost:8080/api/v1/attendance/b212763d-0686-4cb9-9ca5-38f099f8df38
+Authorization: Bearer 4f41465f-4689-4d10-85b4-b7818572ee22

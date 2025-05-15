@@ -1,0 +1,9 @@
+POST http://localhost:8080/api/v1/forum/comments
+Content-Type: application/json
+Authorization: Bearer 4f41465f-4689-4d10-85b4-b7818572ee22
+
+{
+    "post_id": "2b7052c7-d23e-4f0a-8e73-965783221877",
+    "content": "The exam schedule will be released next week. Thank you for your patience.",
+    "author_id": "4f41465f-4689-4d10-85b4-b7818572ee22"
+}

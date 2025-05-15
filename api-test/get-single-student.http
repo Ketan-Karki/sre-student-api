@@ -1,1 +1,2 @@
-GET http://localhost:8080/api/v1/students/b20d48f8-1497-4601-9d0f-ccc07ce0eaa4
+GET http://localhost:8080/api/v1/students/fa0ea95e-731f-4cec-9b9a-836d9a47ec85
+Authorization: Bearer 4f41465f-4689-4d10-85b4-b7818572ee22

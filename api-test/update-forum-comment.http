@@ -1,0 +1,9 @@
+PUT http://localhost:8080/api/v1/forum/comments/12b698e5-04c4-4606-9d63-4d7162fe84d9
+Content-Type: application/json
+Authorization: Bearer 4f41465f-4689-4d10-85b4-b7818572ee22
+
+{
+    "content": "The exam schedule will be released next Monday. Please check the student portal for updates.",
+    "author_id": "4f41465f-4689-4d10-85b4-b7818572ee22",
+    "post_id": "2b7052c7-d23e-4f0a-8e73-965783221877"
+}

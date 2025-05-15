@@ -1,0 +1,2 @@
+DELETE http://localhost:8080/api/v1/forum/posts/33ae0416-00b6-4aa4-acc4-396808d0a3a1
+Authorization: Bearer 4f41465f-4689-4d10-85b4-b7818572ee22

@@ -1,0 +1,2 @@
+GET http://localhost:8080/api/v1/grades/student/b5033852-f11a-40c4-a5b1-0268f45a7c62
+Authorization: Bearer 4f41465f-4689-4d10-85b4-b7818572ee22

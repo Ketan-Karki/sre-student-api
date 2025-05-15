@@ -1,0 +1,10 @@
+PUT http://localhost:8080/api/v1/forum/posts/2b7052c7-d23e-4f0a-8e73-965783221877
+Content-Type: application/json
+Authorization: Bearer 4f41465f-4689-4d10-85b4-b7818572ee22
+
+{
+    "title": "Updated: Question about upcoming exam",
+    "content": "When will the final exam schedule be released? I need to plan my study time.",
+    "author_id": "4f41465f-4689-4d10-85b4-b7818572ee22",
+    "student_id": "b5033852-f11a-40c4-a5b1-0268f45a7c62"
+}
