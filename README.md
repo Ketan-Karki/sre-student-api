@@ -100,6 +100,61 @@ To set up the project locally, follow these steps:
    cd student-api
    ```
 
+## Database Migrations
+
+The application uses a database migration system to manage schema changes. Migrations are automatically applied when the application starts, ensuring the database schema is always up-to-date.
+
+### Migrations Structure
+
+All database migrations are stored in the `/migrations` directory and follow the naming convention:
+- `{version}_{description}.up.sql` - Forward migration
+- `{version}_{description}.down.sql` - Rollback migration
+
+### Using the Migration CLI Tool
+
+A command-line tool is provided to manage migrations independently from the main application:
+
+```bash
+go run cmd/migrate/main.go -command=[COMMAND] [OPTIONS]
+```
+
+#### Available Commands:
+
+- **up**: Apply all pending migrations
+  ```bash
+  go run cmd/migrate/main.go -command=up
+  ```
+
+- **down**: Roll back all migrations
+  ```bash
+  go run cmd/migrate/main.go -command=down
+  ```
+
+- **version**: Show current migration version
+  ```bash
+  go run cmd/migrate/main.go -command=version
+  ```
+
+- **create**: Create a new migration
+  ```bash
+  go run cmd/migrate/main.go -command=create -name="create_new_table"
+  ```
+
+- **Apply specific number of migrations**
+  ```bash
+  # Apply next 2 migrations
+  go run cmd/migrate/main.go -command=up -steps=2
+  
+  # Roll back 1 migration
+  go run cmd/migrate/main.go -command=down -steps=1
+  ```
+
+#### Additional Options:
+
+- `-db-url`: Database connection URL (default: uses DATABASE_URL env var)
+- `-migrations-dir`: Directory containing migration files (default: ./migrations)
+- `-verbose`: Enable detailed logging
+
 2. **Install Go:**
    Ensure you have Go installed on your machine. You can download it from [the official Go website](https://golang.org/dl/).
 

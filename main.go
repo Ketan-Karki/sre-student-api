@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
 	"example.com/sre-bootcamp-rest-api/db"
 	"example.com/sre-bootcamp-rest-api/middleware"
+	"example.com/sre-bootcamp-rest-api/migrations"
 	"example.com/sre-bootcamp-rest-api/routes"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -21,14 +23,30 @@ func main() {
 	middleware.InitLogger()
 	logger := middleware.GetLogger()
 
-	// Set up database logger
+	// Set up package loggers
 	db.SetLogger(logger)
-
-	// Initialize Database
+	migrations.SetLogger(logger)
+	
+	// Get database URL from environment
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		dbURL = "postgres://postgres:postgres@localhost:5432/student_api?sslmode=disable" // fallback to local
+		logger.Warn("Using default database URL as DATABASE_URL is not set")
+	}
+	
+	// Initialize Database connection
 	if err := db.InitDB(); err != nil {
 		logger.Fatalf("Failed to initialize database: %v", err)
 	}
 	logger.Info("Database connection established")
+	
+	// Run migrations
+	migrationsPath := filepath.Join(".", "migrations")
+	logger.WithField("path", migrationsPath).Info("Running database migrations")
+	if err := migrations.RunMigrations(dbURL, migrationsPath); err != nil {
+		logger.Fatalf("Failed to run migrations: %v", err)
+	}
+	logger.Info("Database migrations completed successfully")
 
 	// Set Gin mode based on environment
 	if os.Getenv("GIN_MODE") == "release" {
