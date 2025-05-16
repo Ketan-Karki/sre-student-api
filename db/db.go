@@ -3,21 +3,41 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/sirupsen/logrus"
 )
+
+var logger *logrus.Entry
+
+// SetLogger sets the logger instance for the db package
+func SetLogger(l *logrus.Logger) {
+	logger = l.WithField("component", "database")
+}
+
+// Mask sensitive information in connection strings
+func maskSensitiveData(connStr string) string {
+	// In a real application, you might want to properly parse and mask the connection string
+	return "[MASKED]"
+}
 
 var DB *sql.DB
 
 func InitDB() error {
+	// Initialize logger if not set
+	if logger == nil {
+		logger = logrus.StandardLogger().WithField("component", "database")
+	}
+
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		dbURL = "postgres://postgres:postgres@localhost:5432/student_api?sslmode=disable" // fallback to local
+		logger.Warn("Using default database URL as DATABASE_URL is not set")
 	}
-	log.Printf("Initializing database with URL: %s", dbURL)
+	logger = logger.WithField("db_url", maskSensitiveData(dbURL))
+	logger.Info("Initializing database connection")
 
 	var err error
 	DB, err = sql.Open("postgres", dbURL)
@@ -35,20 +55,24 @@ func InitDB() error {
 		if err == nil {
 			break
 		}
-		log.Printf("Failed to ping database, retrying in 1 second...")
-		time.Sleep(time.Second)
+		retryIn := time.Second * time.Duration(i+1)
+		logger.WithError(err).Warnf("Failed to ping database, retrying in %v...", retryIn)
+		time.Sleep(retryIn)
 	}
 	if err != nil {
+		logger.WithError(err).Error("Failed to ping database after retries")
 		return fmt.Errorf("failed to ping database: %w", err)
 	}
 
 	// Create tables
+	logger.Info("Creating database tables if they don't exist")
 	err = createTables()
 	if err != nil {
+		logger.WithError(err).Error("Failed to create tables")
 		return fmt.Errorf("failed to create tables: %w", err)
 	}
 
-	log.Printf("Successfully initialized database at %s", dbURL)
+	logger.Info("Successfully initialized database connection")
 	return nil
 }
 
@@ -75,9 +99,9 @@ func createTables() error {
 		if err != nil {
 			return fmt.Errorf("failed to create students table: %w", err)
 		}
-		log.Println("Created students table")
+		logger.Info("Created students table")
 	} else {
-		log.Println("Students table already exists")
+		logger.Debug("Students table already exists")
 	}
 
 	// Check if users table exists
@@ -104,7 +128,7 @@ func createTables() error {
 		if err != nil {
 			return fmt.Errorf("failed to create users table: %w", err)
 		}
-		log.Println("Created users table")
+		logger.Info("Created users table")
 
 		// Create parent-student relationship table
 		query = `
@@ -118,9 +142,9 @@ func createTables() error {
 		if err != nil {
 			return fmt.Errorf("failed to create parent_student table: %w", err)
 		}
-		log.Println("Created parent_student table")
+		logger.Info("Created parent_student table")
 	} else {
-		log.Println("Users table already exists")
+		logger.Debug("Users table already exists")
 
 		// Check if parent_student table exists
 		err = DB.QueryRow("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'parent_student')").Scan(&exists)
@@ -140,9 +164,9 @@ func createTables() error {
 			if err != nil {
 				return fmt.Errorf("failed to create parent_student table: %w", err)
 			}
-			log.Println("Created parent_student table")
+			logger.Info("Created parent_student table")
 		} else {
-			log.Println("Parent_student table already exists")
+			logger.Debug("Parent_student table already exists")
 		}
 	}
 
@@ -170,9 +194,9 @@ func createTables() error {
 		if err != nil {
 			return fmt.Errorf("failed to create attendance table: %w", err)
 		}
-		log.Println("Created attendance table")
+		logger.Info("Created attendance table")
 	} else {
-		log.Println("Attendance table already exists")
+		logger.Debug("Attendance table already exists")
 	}
 
 	// Check if assignments table exists
@@ -198,9 +222,9 @@ func createTables() error {
 		if err != nil {
 			return fmt.Errorf("failed to create assignments table: %w", err)
 		}
-		log.Println("Created assignments table")
+		logger.Info("Created assignments table")
 	} else {
-		log.Println("Assignments table already exists")
+		logger.Debug("Assignments table already exists")
 	}
 
 	// Check if grades table exists
@@ -229,9 +253,9 @@ func createTables() error {
 		if err != nil {
 			return fmt.Errorf("failed to create grades table: %w", err)
 		}
-		log.Println("Created grades table")
+		logger.Info("Created grades table")
 	} else {
-		log.Println("Grades table already exists")
+		logger.Debug("Grades table already exists")
 	}
 
 	// Check if forum_posts table exists
@@ -256,9 +280,9 @@ func createTables() error {
 		if err != nil {
 			return fmt.Errorf("failed to create forum_posts table: %w", err)
 		}
-		log.Println("Created forum_posts table")
+		logger.Info("Created forum_posts table")
 	} else {
-		log.Println("Forum_posts table already exists")
+		logger.Debug("Forum_posts table already exists")
 	}
 
 	// Check if forum_comments table exists
@@ -282,9 +306,9 @@ func createTables() error {
 		if err != nil {
 			return fmt.Errorf("failed to create forum_comments table: %w", err)
 		}
-		log.Println("Created forum_comments table")
+		logger.Info("Created forum_comments table")
 	} else {
-		log.Println("Forum_comments table already exists")
+		logger.Debug("Forum_comments table already exists")
 	}
 
 	return nil
