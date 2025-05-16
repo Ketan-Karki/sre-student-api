@@ -1,2 +1,2 @@
-GET http://localhost:8080/api/v1/reports/attendance?startDate=2025-05-01T00:00:00Z&endDate=2025-05-15T23:59:59Z
-Authorization: Bearer 4f41465f-4689-4d10-85b4-b7818572ee22
+GET http://localhost:8080/api/v1/reports/attendance?startDate=2025-05-01&endDate=2025-05-15
+Authorization: Bearer f2d87440-3ef4-41c7-8e85-73ae25cb381c

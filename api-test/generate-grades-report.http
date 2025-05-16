@@ -1,2 +1,2 @@
 GET http://localhost:8080/api/v1/reports/grades?start=2025-05-01&end=2025-05-15
-Authorization: Bearer 4f41465f-4689-4d10-85b4-b7818572ee22
+Authorization: Bearer f2d87440-3ef4-41c7-8e85-73ae25cb381c
