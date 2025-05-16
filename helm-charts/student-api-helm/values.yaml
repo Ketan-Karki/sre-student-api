@@ -21,7 +21,7 @@ namespace:
 studentApi:
   image:
     repository: nginx
-    tag: 05a1baa
+    tag: 8a9499d
     pullPolicy: IfNotPresent
   replicas: 1
   resources:
@@ -63,7 +63,7 @@ blackboxExporter:
   name: blackbox-exporter
   image:
     repository: prom/blackbox-exporter
-    tag: 05a1baa
+    tag: 8a9499d
     pullPolicy: IfNotPresent
   resources:
     requests:
@@ -138,7 +138,7 @@ blackboxExporter:
 postgres:
   image:
     repository: postgres
-    tag: 05a1baa
+    tag: 8a9499d
     pullPolicy: IfNotPresent
   replicas: 1
   resources:
@@ -169,7 +169,7 @@ postgres:
     enabled: true
     image:
       repository: bitnami/postgres-exporter # More stable image
-      tag: 05a1baa
+      tag: 8a9499d
       pullPolicy: IfNotPresent
     resources:
       requests:
@@ -189,7 +189,7 @@ nginx:
   enabled: true
   image:
     repository: nginx
-    tag: 05a1baa
+    tag: 8a9499d
     pullPolicy: IfNotPresent
   replicas: 1
   configMap:
