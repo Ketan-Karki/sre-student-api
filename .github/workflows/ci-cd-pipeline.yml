@@ -177,7 +177,7 @@ jobs:
           tar -czvf deployment-package.tar.gz deployment-artifacts
 
       - name: Upload deployment artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: deployment-package
           path: deployment-package.tar.gz
@@ -271,7 +271,7 @@ jobs:
           tar -czvf ${RELEASE_NAME}.tar.gz releases release-info.yaml
 
       - name: Upload release artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: release-${{ steps.set-env.outputs.env_name }}
           path: student-api-${{ steps.set-env.outputs.env_name }}-${{ needs.build.outputs.image_tag }}.tar.gz
