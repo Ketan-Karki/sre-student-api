@@ -109,6 +109,8 @@ The application supports two ways to configure the database connection:
    DATABASE_URL=postgres://user:password@host:port/dbname?sslmode=disable
    ```
 
+A `.env` file is provided as a template. Copy it to `.env` and update the values as needed.
+
 ## Local Setup Instructions
 
 To set up the project locally, follow these steps:
@@ -118,6 +120,12 @@ To set up the project locally, follow these steps:
    ```bash
    git clone https://github.com/ketan-karki/sre-student-api.git
    cd student-api
+   ```
+
+2. **Set up environment variables:**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your database configuration
    ```
 
 ## Database Migrations
