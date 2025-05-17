@@ -45,7 +45,7 @@ studentApi:
   # Image configuration
   image:
     repository: nginx
-    tag: 8a9499d  # Default to a specific tag
+    tag: 3d496de
     pullPolicy: IfNotPresent
   
   # Replica count
@@ -129,7 +129,7 @@ blackboxExporter:
   # Image configuration
   image:
     repository: prom/blackbox-exporter
-    tag: v0.24.0  # Using a specific version
+    tag: 3d496de
     pullPolicy: IfNotPresent
   
   # Resource requests and limits
@@ -226,7 +226,7 @@ blackboxExporter:
 postgres:
   image:
     repository: postgres
-    tag: 8a9499d
+    tag: 3d496de
     pullPolicy: IfNotPresent
   replicas: 1
   resources:
@@ -257,7 +257,7 @@ postgres:
     enabled: true
     image:
       repository: bitnami/postgres-exporter # More stable image
-      tag: 8a9499d
+      tag: 3d496de
       pullPolicy: IfNotPresent
     resources:
       requests:
@@ -277,7 +277,7 @@ nginx:
   enabled: true
   image:
     repository: nginx
-    tag: 8a9499d
+    tag: 3d496de
     pullPolicy: IfNotPresent
   replicas: 1
   configMap:
