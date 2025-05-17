@@ -1,14 +1,27 @@
-# Values for student-api chart in development environment
+# ============================================================================
+# Development Environment Configuration
+# ============================================================================
+# This file contains development-specific overrides for the Student API.
+# It inherits all values from the parent values.yaml and overrides as needed.
+# ============================================================================
+
+# Namespace configuration for development
 namespace:
   create: true
   name: dev-student-api
 
+# Application configuration
 studentApi:
+  # Image configuration for development
   image:
     repository: student-api
-    tag: 8a9499d
+    tag: latest
     pullPolicy: Never  # Use Never for local images
+  
+  # Single replica in development
   replicas: 1
+  
+  # Resource requests and limits for development
   resources:
     requests:
       cpu: 100m
@@ -16,16 +29,24 @@ studentApi:
     limits:
       cpu: 200m
       memory: 256Mi
-  service:
-    type: ClusterIP
-    port: 8080
+  
+  # Environment variables for development
+  env:
+    LOG_LEVEL: debug
+    GIN_MODE: debug
 
+# Database configuration for development
 postgres:
+  enabled: true
   image:
     repository: postgres
-    tag: 8a9499d
+    tag: 15.3
     pullPolicy: IfNotPresent
+  
+  # Single replica in development
   replicas: 1
+  
+  # Resource requests and limits for development database
   resources:
     requests:
       cpu: 100m
@@ -33,18 +54,40 @@ postgres:
     limits:
       cpu: 200m
       memory: 256Mi
-  database:
-    name: api
-    user: postgres
+  
+  # Database credentials
+  auth:
+    postgresPassword: postgres
+    username: postgres
     password: postgres
+    database: student_api_dev
+  
+  # Persistence settings
   persistence:
     enabled: true
     size: 1Gi
+    storageClass: ""
 
+# NGINX configuration for development
 nginx:
   enabled: true
   image:
     repository: nginx
-    tag: 8a9499d
+    tag: latest
     pullPolicy: IfNotPresent
+  
+  # Single replica in development
   replicas: 1
+  
+  # Resource requests and limits for development NGINX
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+# Disable monitoring in development to save resources
+blackboxExporter:
+  enabled: false

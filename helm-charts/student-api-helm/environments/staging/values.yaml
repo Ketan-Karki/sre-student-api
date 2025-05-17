@@ -1,0 +1,57 @@
+# Staging environment values
+namespace:
+  create: true
+  name: "staging-student-api"
+
+studentApi:
+  image:
+    repository: nginx
+    tag: 8a9499d
+    pullPolicy: IfNotPresent
+  replicas: 2
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  service:
+    type: ClusterIP
+    port: 8080
+
+postgres:
+  image:
+    repository: postgres
+    tag: 15.3
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  database:
+    name: api
+    user: postgres
+    password: postgres  # In staging, consider using a secret manager
+  persistence:
+    enabled: true
+    size: 5Gi
+
+nginx:
+  enabled: true
+  image:
+    repository: nginx
+    tag: 8a9499d
+    pullPolicy: IfNotPresent
+  replicas: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi

@@ -309,6 +309,37 @@ To run the Docker container, use the following command:
 docker run -d -p 8080:80 ketan-karki/student-api
 ```
 
+## Environment Configuration
+
+The application supports multiple deployment environments (development, staging, production) with appropriate configurations for each. Environment-specific configurations are managed using Helm values files.
+
+### Environment Differences
+
+| Configuration       | Development | Staging | Production |
+|---------------------|-------------|---------|------------|
+| Replicas           | 1           | 2       | 3+         |
+| Resource Requests  | Minimal     | Medium  | High       |
+| Logging Level      | Debug       | Info    | Info       |
+| Debug Features     | Enabled     | Some    | Disabled   |
+| Monitoring         | Disabled    | Basic   | Full       |
+| Database Replicas  | 1           | 1       | 2+         |
+| Auto-scaling       | Disabled    | Enabled | Enabled    |
+
+### Configuration Management
+
+Environment-specific configurations are stored in the `helm-charts/student-api-helm/environments/` directory:
+
+```
+helm-charts/student-api-helm/environments/
+├── dev/              # Development environment
+│   └── values.yaml
+├── staging/          # Staging environment
+│   └── values.yaml
+├── prod/             # Production environment
+│   └── values.yaml
+└── README.md         # Environment documentation
+```
+
 ## Kubernetes Deployment
 
 ### Prerequisites

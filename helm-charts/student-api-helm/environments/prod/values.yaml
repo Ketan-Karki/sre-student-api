@@ -1,49 +1,154 @@
-# Production environment values
+# ============================================================================
+# Production Environment Configuration
+# ============================================================================
+# This file contains production-specific overrides for the Student API.
+# It inherits all values from the parent values.yaml and overrides as needed.
+# ============================================================================
+
+# Namespace configuration for production
 namespace:
   create: true
-  name: "prod-student-api"
+  name: prod-student-api
 
+# Application configuration for production
 studentApi:
+  # Image configuration for production (use specific version tags in production)
   image:
-    repository: nginx
-    tag: latest
-    pullPolicy: Always
-  replicas: 2
+    repository: student-api
+    tag: v1.0.0  # Always use explicit version tags in production
+    pullPolicy: IfNotPresent
+  
+  # Multiple replicas for high availability
+  replicas: 3
+  
+  # Resource requests and limits for production
   resources:
     requests:
-      cpu: 200m
-      memory: 256Mi
-    limits:
       cpu: 500m
       memory: 512Mi
-  service:
-    type: ClusterIP
-    port: 8080
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  
+  # Environment variables for production
+  env:
+    LOG_LEVEL: info
+    GIN_MODE: release
+  
+  # Enable autoscaling in production
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  # Configure liveness and readiness probes
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 5
+    failureThreshold: 3
 
+# Database configuration for production
 postgres:
+  enabled: true
   image:
     repository: postgres
-    tag: 15.3
+    tag: 15.3  # Use specific version in production
     pullPolicy: IfNotPresent
-  replicas: 1
+  
+  # Multiple replicas for high availability
+  replicas: 2
+  
+  # Resource requests and limits for production database
   resources:
     requests:
-      cpu: 200m
-      memory: 256Mi
-    limits:
       cpu: 500m
-      memory: 512Mi
-  database:
-    name: api
-    user: postgres
-    password: postgres  # In production, use a secret manager or Kubernetes secrets
-
-nginx:
-  configMap:
-    name: nginx-config
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  
+  # Database credentials (in production, use secrets)
+  auth:
+    existingSecret: postgres-credentials  # Reference to Kubernetes secret
+    username: postgres
+    database: student_api_prod
+  
+  # Persistence settings for production
+  persistence:
     enabled: true
+    size: 100Gi
+    storageClass: "standard"  # Use appropriate storage class for your cloud provider
+  
+  # Enable backup configuration
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"  # Daily at 2 AM
+    retention: 7d
+
+# NGINX configuration for production
+nginx:
+  enabled: true
   image:
     repository: nginx
-    tag: latest
+    tag: stable  # Use specific version in production
     pullPolicy: IfNotPresent
+  
+  # Multiple replicas for high availability
   replicas: 2
+  
+  # Resource requests and limits for production NGINX
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  
+  # Enable metrics for NGINX
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+# Enable monitoring in production
+blackboxExporter:
+  enabled: true
+  
+  # Configure additional probes for production
+  probes:
+    http_2xx:
+      prober: http
+      timeout: 5s
+      http:
+        valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+        valid_status_codes: [200, 301, 302, 307, 308]
+        method: GET
+        preferred_ip_protocol: "ip4"
+        follow_redirects: true
+    
+    api_health:
+      prober: http
+      timeout: 5s
+      http:
+        valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+        valid_status_codes: [200]
+        method: GET
+        preferred_ip_protocol: "ip4"
+        fail_if_body_not_matches_regexp:
+          - '"status":"(ok|healthy)"'

@@ -1,6 +1,19 @@
-# Global settings
+# ============================================================================
+# Global Settings
+# ============================================================================
+# These settings are common across all environments and can be overridden in
+# environment-specific values files.
+# ============================================================================
+
+# Global name overrides
 nameOverride: ""
 fullnameOverride: ""
+
+# ============================================================================
+# Image Configuration
+# ============================================================================
+# Configure container images and pull secrets for all environments
+# ============================================================================
 
 # Image credentials for private registry access
 imageCredentials:
@@ -12,18 +25,33 @@ imageCredentials:
   createSecret: false
   secretName: "registry-credentials"
 
-# Namespace configuration
+# ============================================================================
+# Namespace Configuration
+# ============================================================================
+# Default namespace settings (override in environment-specific values)
+# ============================================================================
+
 namespace:
-  create: false
+  create: true
   name: "student-api"
 
-# Student API configuration
+# ============================================================================
+# Student API Configuration
+# ============================================================================
+# Default configuration for the Student API application
+# ============================================================================
+
 studentApi:
+  # Image configuration
   image:
     repository: nginx
-    tag: 8a9499d
+    tag: 8a9499d  # Default to a specific tag
     pullPolicy: IfNotPresent
+  
+  # Replica count
   replicas: 1
+  
+  # Resource requests and limits
   resources:
     requests:
       cpu: 100m
@@ -31,13 +59,44 @@ studentApi:
     limits:
       cpu: 200m
       memory: 256Mi
+  
+  # Service configuration
   service:
     type: ClusterIP
     port: 8080
     targetPort: 80
-    # Use the working selector that targets the direct-api deployment
     selector:
-      app: direct-api
+      app: student-api  # Consistent label selector
+  
+  # Environment variables
+  env: {}
+  
+  # Liveness and readiness probes
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  # Autoscaling configuration
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
 
   # Required for template compatibility
   metrics:
@@ -57,14 +116,23 @@ studentApi:
           location /metrics { return 200 '# TYPE up gauge\nup 1\n'; }
         }
 
-# Blackbox Exporter configuration for monitoring internal services
+# ============================================================================
+# Monitoring Configuration
+# ============================================================================
+# Blackbox Exporter for monitoring internal services
+# ============================================================================
+
 blackboxExporter:
   enabled: true
   name: blackbox-exporter
+  
+  # Image configuration
   image:
     repository: prom/blackbox-exporter
-    tag: 8a9499d
+    tag: v0.24.0  # Using a specific version
     pullPolicy: IfNotPresent
+  
+  # Resource requests and limits
   resources:
     requests:
       cpu: 50m
@@ -72,11 +140,31 @@ blackboxExporter:
     limits:
       cpu: 100m
       memory: 128Mi
+  
+  # Service configuration
   service:
     type: NodePort
     port: 9115
     name: blackbox-exporter
     nodePort: 30115
+    
+  # Probes configuration
+  probes:
+    http_2xx:
+      prober: http
+      timeout: 5s
+      http:
+        valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+        valid_status_codes: [200]
+        method: GET
+        preferred_ip_protocol: "ip4"
+        follow_redirects: true
+    
+    tcp_connect:
+      prober: tcp
+      timeout: 5s
+      tcp:
+        preferred_ip_protocol: "ip4"
   config:
     modules:
       # HTTP module that expects 2xx response
