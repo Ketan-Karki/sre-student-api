@@ -1,0 +1,429 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - '*.go'
+      - 'middleware/**'
+      - 'models/**'
+      - 'routes/**'
+      - 'migrations/**'
+      - 'db/**'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'go.mod'
+      - 'go.sum'
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+      - master
+    paths:
+      - '*.go'
+      - 'middleware/**'
+      - 'models/**'
+      - 'routes/**'
+      - 'migrations/**'
+      - 'db/**'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'go.mod'
+      - 'go.sum'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+env:
+  GHCR_REGISTRY: ghcr.io
+  DOCKERHUB_REGISTRY: docker.io
+  IMAGE_NAME: ${{ github.repository }}
+  DOCKERHUB_IMAGE: ketankarki/student-api
+  GO_VERSION: "1.21"
+
+jobs:
+  # ============================================================================
+  # BUILD PHASE
+  # ============================================================================
+  # Transform code repo into an executable bundle
+  # Fetch dependencies, compile binaries and assets
+  # ============================================================================
+  build:
+    name: Build Phase
+    runs-on: self-hosted
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+      commit_sha: ${{ steps.short-sha.outputs.sha }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false  # Disable built-in cache to avoid tar issues
+
+      - name: Get short SHA
+        id: short-sha
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Go Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Verify dependencies
+        run: go mod verify
+
+      - name: Lint code
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          args: --timeout=5m
+
+      - name: Build application
+        run: go build -v -o bin/app
+
+      - name: Run unit tests
+        run: go test -v ./...
+
+      - name: Run integration tests with database
+        run: |
+          docker-compose up -d postgres
+          sleep 5  # wait for database to start
+          go test -v -tags=integration ./...
+          docker-compose down
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME }}
+            ${{ env.DOCKERHUB_REGISTRY }}/${{ env.DOCKERHUB_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=long
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GHCR_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKERHUB_REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push container images
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ steps.meta.outputs.version }}
+            BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+            COMMIT_SHA=${{ github.sha }}
+
+      # Upload artifacts to be used in the release phase
+      - name: Package deployment artifacts
+        run: |
+          mkdir -p deployment-artifacts
+          cp -r migrations deployment-artifacts/
+          cp -r helm-charts deployment-artifacts/
+          cp Dockerfile deployment-artifacts/
+          
+          # Create build info file
+          cat > deployment-artifacts/build-info.txt << EOF
+          Version: ${{ steps.meta.outputs.version }}
+          Commit: ${{ github.sha }}
+          Build Time: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          Builder: GitHub Actions
+          EOF
+          
+          tar -czvf deployment-package.tar.gz deployment-artifacts
+
+      - name: Upload deployment artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: deployment-package
+          path: deployment-package.tar.gz
+          retention-days: 7
+
+  # ============================================================================
+  # RELEASE PHASE
+  # ============================================================================
+  # Takes the build and combines it with config
+  # Creates a release that can be executed in any environment
+  # ============================================================================
+  release:
+    name: Release Phase
+    needs: build
+    runs-on: self-hosted
+    if: success() && github.event_name != 'pull_request'
+    outputs:
+      env_name: ${{ steps.set-env.outputs.env_name }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download deployment artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: deployment-package
+          path: .
+
+      - name: Extract deployment artifacts
+        run: tar -xzvf deployment-package.tar.gz
+
+      - name: Determine environment
+        id: set-env
+        run: |
+          # Determine environment based on branch/tag or manual input
+          if [[ "${{ github.ref }}" == "refs/tags/v"* ]]; then
+            ENV_NAME="prod"
+          elif [[ "${{ github.event.inputs.environment }}" != "" ]]; then
+            ENV_NAME="${{ github.event.inputs.environment }}"
+          else
+            ENV_NAME="dev"
+          fi
+          echo "env_name=${ENV_NAME}" >> $GITHUB_OUTPUT
+          echo "Targeting environment: ${ENV_NAME}"
+
+      - name: Update Helm values with image tag
+        run: |
+          # Update the image tag in the values files
+          IMAGE_TAG="${{ needs.build.outputs.commit_sha }}"
+          if [[ "${{ github.ref }}" == "refs/tags/v"* ]]; then
+            # If this is a tag, use the tag name without the 'v' prefix
+            TAG_NAME="${{ github.ref_name }}"
+            IMAGE_TAG="${TAG_NAME#v}"
+          fi
+          
+          echo "Updating image tag to: ${IMAGE_TAG}"
+          
+          # Update main values.yaml
+          sed -i "s/tag: .*$/tag: ${IMAGE_TAG}/g" deployment-artifacts/helm-charts/student-api-helm/values.yaml
+          
+          # Update environment-specific values file
+          ENV_FILE="deployment-artifacts/helm-charts/student-api-helm/environments/${{ steps.set-env.outputs.env_name }}/values.yaml"
+          if [ -f "$ENV_FILE" ]; then
+            sed -i "s/tag: .*$/tag: ${IMAGE_TAG}/g" "$ENV_FILE"
+            echo "Updated ${{ steps.set-env.outputs.env_name }} environment values file"
+          fi
+
+      - name: Package release
+        run: |
+          RELEASE_VERSION="${{ needs.build.outputs.image_tag }}"
+          RELEASE_NAME="student-api-${{ steps.set-env.outputs.env_name }}-${RELEASE_VERSION}"
+          
+          # Create release info
+          cat > release-info.yaml << EOF
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: release-info
+          data:
+            version: "${RELEASE_VERSION}"
+            environment: "${{ steps.set-env.outputs.env_name }}"
+            timestamp: "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            commit: "${{ github.sha }}"
+            buildNumber: "${{ github.run_number }}"
+          EOF
+          
+          # Package Helm chart with updated values
+          helm package deployment-artifacts/helm-charts/student-api-helm -d ./releases --version ${RELEASE_VERSION} --app-version ${RELEASE_VERSION}
+          
+          # Create the release tarball
+          tar -czvf ${RELEASE_NAME}.tar.gz releases release-info.yaml
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-${{ steps.set-env.outputs.env_name }}
+          path: student-api-${{ steps.set-env.outputs.env_name }}-${{ needs.build.outputs.image_tag }}.tar.gz
+          retention-days: 30
+
+  # ============================================================================
+  # RUN PHASE
+  # ============================================================================
+  # Run the app in the execution environment
+  # Starts app process using a specific release
+  # No code or config changes happen here
+  # ============================================================================
+  deploy:
+    name: Run Phase - Deploy to ${{ needs.release.outputs.env_name }}
+    needs: [build, release]
+    runs-on: self-hosted
+    if: success() && github.event_name != 'pull_request'
+    environment:
+      name: ${{ needs.release.outputs.env_name }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download release artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: release-${{ needs.release.outputs.env_name }}
+          path: .
+
+      - name: Extract release
+        run: tar -xzvf student-api-${{ needs.release.outputs.env_name }}-${{ needs.build.outputs.image_tag }}.tar.gz
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: Set Kubernetes context
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+
+      - name: Deploy to Kubernetes with Helm
+        run: |
+          ENV="${{ needs.release.outputs.env_name }}"
+          VERSION="${{ needs.build.outputs.image_tag }}"
+          RELEASE_NAME="student-api-${ENV}"
+          NAMESPACE="student-api-${ENV}"
+          
+          # Create namespace if it doesn't exist
+          kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Apply release info
+          kubectl apply -f release-info.yaml -n ${NAMESPACE}
+          
+          # Deploy using Helm
+          helm upgrade --install ${RELEASE_NAME} \
+            ./releases/student-api-helm-${VERSION}.tgz \
+            --namespace ${NAMESPACE} \
+            -f deployment-artifacts/helm-charts/student-api-helm/environments/${ENV}/values.yaml \
+            --wait --timeout 10m
+          
+          # Verify deployment
+          kubectl get pods,svc -n ${NAMESPACE}
+
+      - name: Run database migrations
+        run: |
+          ENV="${{ needs.release.outputs.env_name }}"
+          NAMESPACE="student-api-${ENV}"
+          
+          # Get database connection details from Kubernetes
+          DB_HOST=$(kubectl get svc -n ${NAMESPACE} -l app=postgres -o jsonpath='{.items[0].metadata.name}')
+          DB_SECRET=$(kubectl get secret -n ${NAMESPACE} -l app=postgres -o jsonpath='{.items[0].metadata.name}')
+          DB_PASSWORD=$(kubectl get secret ${DB_SECRET} -n ${NAMESPACE} -o jsonpath='{.data.postgres-password}' | base64 --decode)
+          
+          # Run migrations in a Kubernetes Job
+          cat << EOF | kubectl apply -f -
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: db-migrations-${RANDOM}
+            namespace: ${NAMESPACE}
+          spec:
+            ttlSecondsAfterFinished: 600
+            template:
+              spec:
+                containers:
+                - name: migrations
+                  image: ${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.image_tag }}
+                  command: ["go", "run", "cmd/migrate/main.go", "-command=up"]
+                  env:
+                  - name: DB_HOST
+                    value: "${DB_HOST}"
+                  - name: DB_PORT
+                    value: "5432"
+                  - name: DB_USER
+                    value: "postgres"
+                  - name: DB_PASSWORD
+                    value: "${DB_PASSWORD}"
+                  - name: DB_NAME
+                    value: "student_api_${ENV}"
+                  - name: DB_SSLMODE
+                    value: "disable"
+                restartPolicy: Never
+            backoffLimit: 3
+          EOF
+          
+          # Wait for job to complete
+          kubectl wait --for=condition=complete job -n ${NAMESPACE} --selector=job-name=db-migrations --timeout=120s
+
+      - name: Run health check
+        run: |
+          ENV="${{ needs.release.outputs.env_name }}"
+          NAMESPACE="student-api-${ENV}"
+          
+          # Get service URL
+          SERVICE_NAME=$(kubectl get svc -n ${NAMESPACE} -l app=student-api -o jsonpath='{.items[0].metadata.name}')
+          
+          # Port-forward the service temporarily for health check
+          kubectl port-forward svc/${SERVICE_NAME} 8080:8080 -n ${NAMESPACE} &
+          PID=$!
+          
+          # Wait for port-forward to be established
+          sleep 5
+          
+          # Run health check
+          HEALTH_STATUS=$(curl -s http://localhost:8080/health | jq -r '.status')
+          
+          # Kill port-forward
+          kill $PID
+          
+          if [ "${HEALTH_STATUS}" != "ok" ]; then
+            echo "Health check failed! Status: ${HEALTH_STATUS}"
+            exit 1
+          fi
+          
+          echo "Deployment health check passed!"
+          
+      - name: Slack notification
+        if: always()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_CHANNEL: deployments
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_ICON: https://github.com/rtCamp.png?size=48
+          SLACK_MESSAGE: "Deployment to ${{ needs.release.outputs.env_name }} ${{ job.status }}"
+          SLACK_TITLE: Deploy Status
+          SLACK_USERNAME: GitHub Actions
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
