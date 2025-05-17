@@ -89,6 +89,26 @@ The Student Management System API provides the following endpoints:
 
 - `GET /api/v1/healthcheck` - Check system health (public endpoint)
 
+## Database Configuration
+
+The application supports two ways to configure the database connection:
+
+1. **Using individual environment variables** (Recommended):
+   ```bash
+   # Database connection settings
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_USER=postgres
+   DB_PASSWORD=postgres
+   DB_NAME=student_api
+   DB_SSLMODE=disable
+   ```
+
+2. **Using DATABASE_URL** (for backward compatibility):
+   ```bash
+   DATABASE_URL=postgres://user:password@host:port/dbname?sslmode=disable
+   ```
+
 ## Local Setup Instructions
 
 To set up the project locally, follow these steps:
